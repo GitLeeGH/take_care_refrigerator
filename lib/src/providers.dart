@@ -373,6 +373,19 @@ final likedRecipeIdsProvider = StreamProvider.autoDispose<Set<String>>((ref) {
       .map((data) => data.map((row) => row['recipe_id'] as String).toSet());
 });
 
+// Provider to get the full Recipe objects for the liked recipes
+final likedRecipesProvider = FutureProvider.autoDispose<List<Recipe>>((ref) async {
+  final supabase = ref.watch(supabaseProvider);
+  final likedIds = ref.watch(likedRecipeIdsProvider).asData?.value;
+
+  if (likedIds == null || likedIds.isEmpty) {
+    return [];
+  }
+
+  final response = await supabase.from('recipes').select().in_('id', likedIds.toList());
+  return (response as List).map((item) => Recipe.fromJson(item)).toList();
+});
+
 final likeRecipeProvider = Provider.autoDispose((ref) {
   final supabase = ref.watch(supabaseProvider);
   final user = supabase.auth.currentUser;
