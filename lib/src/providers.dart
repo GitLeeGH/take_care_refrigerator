@@ -422,6 +422,7 @@ final likeRecipeProvider = Provider.autoDispose((ref) {
           .from('recipe_likes')
           .insert({'user_id': user.id, 'recipe_id': recipeId});
     }
+    ref.invalidate(likedRecipeIdsProvider); // Force the liked IDs to refetch
     ref.invalidate(popularIdsProvider); // Invalidate to refetch sorted IDs
   }
 
