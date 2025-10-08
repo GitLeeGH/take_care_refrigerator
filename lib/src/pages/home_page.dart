@@ -53,7 +53,12 @@ class _HomePageState extends ConsumerState<HomePage>
             padding: const EdgeInsets.only(right: 16.0),
             child: IconButton(
               icon: const Icon(Icons.add_circle, color: primaryGreen, size: 32),
-              onPressed: () => _showAddEditIngredientSheet(context, ref, null),
+              onPressed: () {
+                final storageTypes = ['refrigerated', 'frozen', 'ambient'];
+                final currentStorageType = storageTypes[_tabController.index];
+                _showAddEditIngredientSheet(context, ref, null,
+                    storageType: currentStorageType);
+              },
             ),
           ),
         ],
@@ -86,9 +91,9 @@ class _HomePageState extends ConsumerState<HomePage>
                 return TabBarView(
                   controller: _tabController,
                   children: [
-                    _buildIngredientList(refrigeratedItems, ref),
-                    _buildIngredientList(frozenItems, ref),
-                    _buildIngredientList(ambientItems, ref),
+                    _buildIngredientList(refrigeratedItems, ref, 'refrigerated'),
+                    _buildIngredientList(frozenItems, ref, 'frozen'),
+                    _buildIngredientList(ambientItems, ref, 'ambient'),
                   ],
                 );
               },
@@ -101,10 +106,12 @@ class _HomePageState extends ConsumerState<HomePage>
     );
   }
 
-  Widget _buildIngredientList(List<Ingredient> items, WidgetRef ref) {
+  Widget _buildIngredientList(
+      List<Ingredient> items, WidgetRef ref, String storageType) {
     return GroupedIngredientList(
       items: items,
-      onAdd: () => _showAddEditIngredientSheet(context, ref, null),
+      onAdd: () =>
+          _showAddEditIngredientSheet(context, ref, null, storageType: storageType),
     );
   }
 }
@@ -426,8 +433,9 @@ class ExpiryProgressBar extends StatelessWidget {
 void _showAddEditIngredientSheet(
   BuildContext context,
   WidgetRef ref,
-  Ingredient? ingredient,
-) {
+  Ingredient? ingredient, {
+  String? storageType,
+}) {
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
@@ -435,16 +443,21 @@ void _showAddEditIngredientSheet(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
-    builder: (context) =>
-        _AddEditIngredientSheet(ingredient: ingredient, ref: ref),
+    builder: (context) => _AddEditIngredientSheet(
+      ingredient: ingredient,
+      ref: ref,
+      storageType: storageType,
+    ),
   );
 }
 
 class _AddEditIngredientSheet extends ConsumerStatefulWidget {
   final Ingredient? ingredient;
   final WidgetRef ref; // Pass ref to the stateful widget
+  final String? storageType;
 
-  const _AddEditIngredientSheet({this.ingredient, required this.ref});
+  const _AddEditIngredientSheet(
+      {this.ingredient, required this.ref, this.storageType});
 
   @override
   ConsumerState<_AddEditIngredientSheet> createState() =>
@@ -467,7 +480,8 @@ class _AddEditIngredientSheetState
     nameController = TextEditingController(text: ingredient?.name);
     quantityController = TextEditingController(text: ingredient?.quantity);
     selectedDate = ingredient?.expiryDate ?? DateTime.now();
-    storageType = ingredient?.storageType ?? 'refrigerated';
+    // Prioritize ingredient's storage type, then passed type, then default.
+    storageType = ingredient?.storageType ?? widget.storageType ?? 'refrigerated';
   }
 
   @override
