@@ -468,34 +468,13 @@ class _AddEditIngredientSheetState
     quantityController = TextEditingController(text: ingredient?.quantity);
     selectedDate = ingredient?.expiryDate ?? DateTime.now();
     storageType = ingredient?.storageType ?? 'refrigerated';
-
-    nameController.addListener(_updateDateForCommonItems);
   }
 
   @override
   void dispose() {
-    nameController.removeListener(_updateDateForCommonItems);
     nameController.dispose();
     quantityController.dispose();
     super.dispose();
-  }
-
-  void _updateDateForCommonItems() {
-    // Use ref.read for one-time reads inside callbacks/listeners
-    final shelfLifeAsync = ref.read(shelfLifeDataProvider);
-
-    // When the future completes, check the map
-    shelfLifeAsync.whenData((shelfLifeMap) {
-      final text = nameController.text;
-      if (shelfLifeMap.containsKey(text)) {
-        final days = shelfLifeMap[text]!;
-        if (mounted) {
-          setState(() {
-            selectedDate = DateTime.now().add(Duration(days: days));
-          });
-        }
-      }
-    });
   }
 
   Future<void> _submit() async {
@@ -569,6 +548,9 @@ class _AddEditIngredientSheetState
 
   @override
   Widget build(BuildContext context) {
+    // Watch the provider here to ensure the data is ready and cached.
+    final shelfLifeData = ref.watch(shelfLifeDataProvider);
+
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -589,6 +571,18 @@ class _AddEditIngredientSheetState
           TextField(
             controller: nameController,
             decoration: const InputDecoration(labelText: '재료명'),
+            onChanged: (text) {
+              // Use the already watched data. This is more efficient.
+              if (shelfLifeData.hasValue) {
+                final shelfLifeMap = shelfLifeData.value!;
+                if (shelfLifeMap.containsKey(text)) {
+                  final days = shelfLifeMap[text]!;
+                  setState(() {
+                    selectedDate = DateTime.now().add(Duration(days: days));
+                  });
+                }
+              }
+            },
           ),
           const SizedBox(height: 16),
           TextField(
