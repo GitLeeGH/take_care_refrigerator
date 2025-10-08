@@ -118,20 +118,30 @@ final recommendedIdsProvider = FutureProvider.autoDispose<List<String>>((ref) as
 // 2. Popular Sort
 final popularIdsProvider = FutureProvider.autoDispose<List<String>>((ref) async {
   final supabase = ref.watch(supabaseProvider);
-  final response = await supabase
-      .from('recipes')
-      .select('id')
-      .order('like_count', ascending: false);
+  final searchQuery = ref.watch(searchQueryProvider);
+
+  var query = supabase.from('recipes').select('id');
+
+  if (searchQuery.isNotEmpty) {
+    query = query.ilike('name', '%$searchQuery%');
+  }
+
+  final response = await query.order('like_count', ascending: false);
   return (response as List).map((item) => item['id'] as String).toList();
 });
 
 // 3. Recent Sort
 final recentIdsProvider = FutureProvider.autoDispose<List<String>>((ref) async {
   final supabase = ref.watch(supabaseProvider);
-  final response = await supabase
-      .from('recipes')
-      .select('id')
-      .order('created_at', ascending: false);
+  final searchQuery = ref.watch(searchQueryProvider);
+
+  var query = supabase.from('recipes').select('id');
+
+  if (searchQuery.isNotEmpty) {
+    query = query.ilike('name', '%$searchQuery%');
+  }
+
+  final response = await query.order('created_at', ascending: false);
   return (response as List).map((item) => item['id'] as String).toList();
 });
 
@@ -261,8 +271,16 @@ final paginatedRecipesProvider = StateNotifierProvider.autoDispose<
   // Call init when the provider is first created.
   notifier.init();
 
-  // When sort type changes, re-initialize the notifier.
+  // When sort type or search query changes, re-initialize the notifier.
   ref.listen(recipeSortProvider, (_, __) => notifier.init());
+  ref.listen(searchQueryProvider, (_, __) {
+    // We debounce this slightly to avoid re-initializing on every keystroke.
+    // This is a simple debounce implementation.
+    final timer = Timer(const Duration(milliseconds: 500), () {
+      notifier.init();
+    });
+    ref.onDispose(() => timer.cancel());
+  });
 
   return notifier;
 });
@@ -332,6 +350,7 @@ final expiringIngredientsRecipesProvider = Provider.autoDispose<List<Recipe>>((r
 final filteredPaginatedRecipesProvider = Provider.autoDispose<List<Recipe>>((ref) {
   final state = ref.watch(paginatedRecipesProvider);
   final searchQuery = ref.watch(searchQueryProvider);
+  final sortType = ref.watch(recipeSortProvider);
   final canMakeOnly = ref.watch(canMakeFilterProvider);
   final ingredients = ref.watch(ingredientsProvider).asData?.value ?? [];
   final myIngredientNames = ingredients.map((e) => e.name).toSet();
@@ -346,8 +365,8 @@ final filteredPaginatedRecipesProvider = Provider.autoDispose<List<Recipe>>((ref
     }).toList();
   }
 
-  // Then, apply search query
-  if (searchQuery.isNotEmpty) {
+  // Then, apply search query ONLY for the recommended sort, as others are pre-filtered.
+  if (searchQuery.isNotEmpty && sortType == RecipeSortType.recommended) {
     recipes = recipes.where((r) {
       return r.name.toLowerCase().contains(searchQuery.toLowerCase());
     }).toList();

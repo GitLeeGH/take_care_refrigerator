@@ -347,8 +347,6 @@ class RecipeDetailPage extends ConsumerStatefulWidget {
 }
 
 class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
-  bool? _isLiked;
-
   Future<void> _launchURL(Uri url) async {
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
@@ -377,16 +375,14 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
         actions: [
           likedIdsAsync.when(
             data: (likedIds) {
-              _isLiked ??= likedIds.contains(recipe.id);
+              final isLiked = likedIds.contains(recipe.id);
               return IconButton(
                 icon: Icon(
-                  _isLiked! ? Icons.favorite : Icons.favorite_border,
-                  color: _isLiked! ? Colors.redAccent : mediumGray,
+                  isLiked ? Icons.favorite : Icons.favorite_border,
+                  color: isLiked ? Colors.redAccent : mediumGray,
                 ),
                 onPressed: () {
-                  final currentlyLiked = _isLiked!;
-                  setState(() => _isLiked = !currentlyLiked);
-                  ref.read(likeRecipeProvider)(recipe.id, currentlyLiked);
+                  ref.read(likeRecipeProvider)(recipe.id, isLiked);
                 },
               );
             },
