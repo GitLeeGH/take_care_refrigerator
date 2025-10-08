@@ -382,7 +382,7 @@ final likedRecipesProvider = FutureProvider.autoDispose<List<Recipe>>((ref) asyn
     return [];
   }
 
-  final response = await supabase.from('recipes').select().in('id', likedIds.toList());
+  final response = await supabase.from('recipes').select().filter('id', 'in', likedIds.toList());
   return (response as List).map((item) => Recipe.fromJson(item)).toList();
 });
 
