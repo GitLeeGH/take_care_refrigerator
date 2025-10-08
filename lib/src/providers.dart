@@ -275,11 +275,18 @@ final paginatedRecipesProvider = StateNotifierProvider.autoDispose<
   ref.listen(recipeSortProvider, (_, __) => notifier.init());
   ref.listen(searchQueryProvider, (_, __) {
     // We debounce this slightly to avoid re-initializing on every keystroke.
-    // This is a simple debounce implementation.
     final timer = Timer(const Duration(milliseconds: 500), () {
       notifier.init();
     });
     ref.onDispose(() => timer.cancel());
+  });
+
+  // Also, when the recommended IDs change (e.g. after ingredients load),
+  // re-init if we are currently sorted by recommended.
+  ref.listen(recommendedIdsProvider, (_, __) {
+    if (ref.read(recipeSortProvider) == RecipeSortType.recommended) {
+      notifier.init();
+    }
   });
 
   return notifier;
