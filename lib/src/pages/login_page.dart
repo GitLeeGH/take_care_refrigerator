@@ -53,6 +53,20 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     }
   }
 
+  Future<void> _signInWithKakao() async {
+    setState(() => _isLoading = true);
+    try {
+      await ref.read(supabaseProvider).auth.signInWithOAuth(OAuthProvider.kakao);
+    } on AuthException catch (e) {
+      if (mounted) _showErrorSnackBar(e.message);
+    } catch (e) {
+      if (mounted) _showErrorSnackBar('An unexpected error occurred: $e');
+    }
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
+  }
+
 
   Future<void> _signInWithEmail() async {
     if (!_formKey.currentState!.validate()) return;
@@ -161,6 +175,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
           child: const Text('Google로 로그인', style: TextStyle(fontSize: 16, color: darkGray, fontWeight: FontWeight.bold)),
+        ),
+        const SizedBox(height: 12),
+        ElevatedButton(
+          onPressed: _signInWithKakao,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFFFEE500), // Kakao yellow
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          child: const Text('카카오로 로그인', style: TextStyle(fontSize: 16, color: Color(0xFF191919), fontWeight: FontWeight.bold)),
         ),
         const SizedBox(height: 12),
         TextButton(
