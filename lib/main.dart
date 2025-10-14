@@ -12,9 +12,15 @@ import 'src/pages/my_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'src/pages/onboarding_page.dart';
 import 'package:take_care_refrigerator/src/pages/login_page.dart';
+import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Kakao SDK
+  KakaoSdk.init(nativeAppKey: '5f221c04f30c10b07c1f376aedf67b61');
+
+  // Temporary key hash code removed.
 
 
   final prefs = await SharedPreferences.getInstance();
@@ -45,22 +51,31 @@ class MyApp extends StatelessWidget {
 }
 
 // Correctly listens to authentication state changes
-class AuthChecker extends ConsumerWidget {
+class AuthChecker extends ConsumerStatefulWidget {
   const AuthChecker({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(supabaseProvider).auth.onAuthStateChange;
+  ConsumerState<AuthChecker> createState() => _AuthCheckerState();
+}
 
+class _AuthCheckerState extends ConsumerState<AuthChecker> {
+  @override
+  Widget build(BuildContext context) {
+    final supabase = ref.watch(supabaseProvider);
+    
     return StreamBuilder<AuthState>(
-      stream: authState,
+      stream: supabase.auth.onAuthStateChange,
+      initialData: AuthState(AuthChangeEvent.signedIn, supabase.auth.currentSession),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
+        final session = snapshot.data?.session ?? supabase.auth.currentSession;
+        
+        if (snapshot.connectionState == ConnectionState.waiting && session == null) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
-        if (snapshot.data?.session != null) {
+        
+        if (session != null) {
           return const AppShell();
         } else {
           return LoginPage();
@@ -85,8 +100,10 @@ class AppShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    ref.watch(notificationSchedulerProvider); // Activate the notification scheduler
+    // 알림 스케줄러 활성화
+    ref.watch(notificationSchedulerProvider);
     final pageIndex = ref.watch(pageIndexProvider);
+    final notifications = ref.watch(notificationListProvider);
 
     return Scaffold(
       body: IndexedStack(index: pageIndex, children: _pages),
@@ -96,29 +113,65 @@ class AppShell extends ConsumerWidget {
         type: BottomNavigationBarType.fixed,
         selectedItemColor: primaryBlue,
         unselectedItemColor: mediumGray,
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
+        items: <BottomNavigationBarItem>[
+          const BottomNavigationBarItem(
             icon: Icon(Icons.kitchen_outlined),
             activeIcon: Icon(Icons.kitchen),
             label: '냉장고',
           ),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
             icon: Icon(Icons.restaurant_menu_outlined),
             activeIcon: Icon(Icons.restaurant_menu),
             label: '레시피',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.notifications_outlined),
-            activeIcon: Icon(Icons.notifications),
+            icon: _buildNotificationIcon(notifications.length, false),
+            activeIcon: _buildNotificationIcon(notifications.length, true),
             label: '알림',
           ),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
             icon: Icon(Icons.person_outline),
             activeIcon: Icon(Icons.person),
-            label: '마이페이지',
+            label: '마이',
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildNotificationIcon(int notificationCount, bool isActive) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Icon(
+          isActive ? Icons.notifications : Icons.notifications_outlined,
+        ),
+        if (notificationCount > 0)
+          Positioned(
+            right: -6,
+            top: -6,
+            child: Container(
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                color: Colors.red,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              constraints: const BoxConstraints(
+                minWidth: 16,
+                minHeight: 16,
+              ),
+              child: Text(
+                notificationCount > 99 ? '99+' : notificationCount.toString(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -26,6 +25,94 @@ class NotificationSettings {
         notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
         daysBefore: daysBefore ?? this.daysBefore,
       );
+}
+
+// 알림 아이템 모델
+class NotificationItem {
+  final String id;
+  final String title;
+  final String message;
+  final DateTime createdAt;
+  final String ingredientId;
+  final int daysLeft;
+  final NotificationPriority priority;
+
+  NotificationItem({
+    required this.id,
+    required this.title,
+    required this.message,
+    required this.createdAt,
+    required this.ingredientId,
+    required this.daysLeft,
+    required this.priority,
+  });
+}
+
+enum NotificationPriority { urgent, warning, info }
+
+// 알림 목록 상태 관리
+class NotificationListNotifier extends StateNotifier<List<NotificationItem>> {
+  NotificationListNotifier() : super([]);
+
+  void addNotification(NotificationItem notification) {
+    state = [notification, ...state];
+  }
+
+  void removeNotification(String id) {
+    state = state.where((n) => n.id != id).toList();
+  }
+
+  void clearAllNotifications() {
+    state = [];
+  }
+
+  void generateNotificationsFromIngredients(List<Ingredient> ingredients) {
+    final now = DateTime.now();
+    final newNotifications = <NotificationItem>[];
+
+    for (final ingredient in ingredients) {
+      final daysLeft = ingredient.expiryDate.difference(now).inDays;
+      
+      if (daysLeft <= 3) {
+        final NotificationPriority priority;
+        final String title;
+        final String message;
+
+        if (daysLeft <= 0) {
+          priority = NotificationPriority.urgent;
+          title = '🚨 유통기한 초과!';
+          message = daysLeft == 0 
+              ? '${ingredient.name}의 유통기한이 오늘까지입니다' 
+              : '${ingredient.name}의 유통기한이 ${-daysLeft}일 지났습니다';
+        } else if (daysLeft == 1) {
+          priority = NotificationPriority.urgent;
+          title = '🚨 유통기한 임박!';
+          message = '${ingredient.name}의 유통기한이 내일까지입니다';
+        } else {
+          priority = NotificationPriority.warning;
+          title = '⚠️ 유통기한 주의';
+          message = '${ingredient.name}의 유통기한이 ${daysLeft}일 남았습니다';
+        }
+
+        // 이미 같은 재료에 대한 알림이 있는지 확인
+        if (!state.any((n) => n.ingredientId == ingredient.id)) {
+          newNotifications.add(NotificationItem(
+            id: '${ingredient.id}_${DateTime.now().millisecondsSinceEpoch}',
+            title: title,
+            message: message,
+            createdAt: now,
+            ingredientId: ingredient.id,
+            daysLeft: daysLeft,
+            priority: priority,
+          ));
+        }
+      }
+    }
+
+    if (newNotifications.isNotEmpty) {
+      state = [...newNotifications, ...state];
+    }
+  }
 }
 
 // =======================================================================
@@ -460,18 +547,64 @@ final notificationSchedulerProvider = Provider.autoDispose((ref) {
 
     if (settings.notificationsEnabled) {
       notificationService.cancelAllNotifications();
+      
+      final now = DateTime.now();
+      int scheduledCount = 0;
+      
       for (final ingredient in ingredients) {
-        final notificationDate =
-            ingredient.expiryDate.subtract(Duration(days: settings.daysBefore));
-        if (notificationDate.isAfter(DateTime.now())) {
+        final expiryDate = ingredient.expiryDate;
+        final daysUntilExpiry = expiryDate.difference(now).inDays;
+        
+        // 유통기한이 이미 지났거나 오늘인 경우 즉시 알림
+        if (daysUntilExpiry <= 0) {
           notificationService.scheduleNotification(
             id: ingredient.id.hashCode,
-            title: '유통기한 임박 알림',
-            body: '${ingredient.name}의 유통기한이 ${settings.daysBefore}일 남았습니다!',
+            title: '🚨 유통기한 초과!',
+            body: '${ingredient.name}의 유통기한이 ${daysUntilExpiry == 0 ? '오늘까지' : '${-daysUntilExpiry}일 지남'}입니다!',
+            scheduledDate: now.add(const Duration(minutes: 1)), // 1분 후 즉시 알림
+          );
+          scheduledCount++;
+          print('즉시 알림 예약: ${ingredient.name} (유통기한 ${daysUntilExpiry == 0 ? '오늘' : '${-daysUntilExpiry}일 지남'})');
+        }
+        // 설정된 일수 이내에 유통기한이 도래하는 경우
+        else if (daysUntilExpiry <= settings.daysBefore) {
+          final notificationDate = DateTime(
+            now.year, now.month, now.day + 1, 9 // 내일 오전 9시
+          );
+          
+          notificationService.scheduleNotification(
+            id: ingredient.id.hashCode,
+            title: '⚠️ 유통기한 임박 알림',
+            body: '${ingredient.name}의 유통기한이 ${daysUntilExpiry}일 남았습니다!',
             scheduledDate: notificationDate,
           );
+          scheduledCount++;
+          print('임박 알림 예약: ${ingredient.name} (D-$daysUntilExpiry) - 내일 오전 9시');
+        }
+        // 정상적인 미래 알림
+        else {
+          final notificationDate = expiryDate.subtract(Duration(days: settings.daysBefore));
+          if (notificationDate.isAfter(now)) {
+            final scheduledDateTime = DateTime(
+              notificationDate.year,
+              notificationDate.month, 
+              notificationDate.day,
+              9 // 오전 9시
+            );
+            
+            notificationService.scheduleNotification(
+              id: ingredient.id.hashCode,
+              title: '유통기한 임박 알림',
+              body: '${ingredient.name}의 유통기한이 ${settings.daysBefore}일 남았습니다!',
+              scheduledDate: scheduledDateTime,
+            );
+            scheduledCount++;
+            print('정규 알림 예약: ${ingredient.name} - ${scheduledDateTime.toString()}');
+          }
         }
       }
+      
+      print('총 $scheduledCount개의 알림이 예약되었습니다.');
     }
   }
 });
@@ -489,5 +622,21 @@ final notificationSettingsProvider =
     StateNotifierProvider<NotificationSettingsNotifier, NotificationSettings>(
   (ref,) {
     return NotificationSettingsNotifier();
+  },
+);
+
+final notificationListProvider = 
+    StateNotifierProvider<NotificationListNotifier, List<NotificationItem>>(
+  (ref) {
+    final notifier = NotificationListNotifier();
+    
+    // 재료 목록이 변경될 때마다 알림 업데이트
+    ref.listen(ingredientsProvider, (_, ingredientsAsync) {
+      if (ingredientsAsync.hasValue) {
+        notifier.generateNotificationsFromIngredients(ingredientsAsync.value!);
+      }
+    });
+    
+    return notifier;
   },
 );

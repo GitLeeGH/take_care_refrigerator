@@ -4,6 +4,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart' as kakao;
 
 import '../providers.dart';
 import '../theme.dart';
@@ -36,7 +37,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         final googleSignIn = GoogleSignIn.instance;
         await googleSignIn.initialize(serverClientId: webClientId);
         final googleUser = await googleSignIn.authenticate();
-        final idToken = (await googleUser!.authentication).idToken!;
+        final idToken = (googleUser.authentication).idToken!;
 
         await ref.read(supabaseProvider).auth.signInWithIdToken(
               provider: OAuthProvider.google,
@@ -56,11 +57,40 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Future<void> _signInWithKakao() async {
     setState(() => _isLoading = true);
     try {
-      await ref.read(supabaseProvider).auth.signInWithOAuth(OAuthProvider.kakao);
-    } on AuthException catch (e) {
-      if (mounted) _showErrorSnackBar(e.message);
+      // 카카오톡 앱으로 로그인 시도, 실패하면 카카오계정으로 로그인
+      if (await kakao.isKakaoTalkInstalled()) {
+        await kakao.UserApi.instance.loginWithKakaoTalk();
+      } else {
+        await kakao.UserApi.instance.loginWithKakaoAccount();
+      }
+
+      // 카카오 사용자 정보 가져오기
+      kakao.User kakaoUser = await kakao.UserApi.instance.me();
+      
+      final String kakaoId = kakaoUser.id.toString();
+      final String? email = kakaoUser.kakaoAccount?.email;
+      final String? nickname = kakaoUser.kakaoAccount?.profile?.nickname;
+
+      // 간단한 익명 로그인 방식으로 처리 (더 안정적)
+      final supabase = ref.read(supabaseProvider);
+      
+      // 익명 로그인 후 사용자 데이터에 카카오 정보 저장
+      final response = await supabase.auth.signInAnonymously();
+      
+      if (response.user != null) {
+        await supabase.auth.updateUser(UserAttributes(
+          data: {
+            'kakao_id': kakaoId,
+            'provider': 'kakao',
+            'nickname': nickname,
+            'email': email,
+            'display_name': nickname,
+          }
+        ));
+      }
+
     } catch (e) {
-      if (mounted) _showErrorSnackBar('An unexpected error occurred: $e');
+      if (mounted) _showErrorSnackBar('로그인 중 오류가 발생했습니다.');
     }
     if (mounted) {
       setState(() => _isLoading = false);
@@ -166,7 +196,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-
         ElevatedButton(
           onPressed: _signInWithGoogle,
           style: ElevatedButton.styleFrom(

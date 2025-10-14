@@ -35,6 +35,11 @@ class NotificationService {
     final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
         flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
+    
+    // 정확한 알람 권한 요청 (Android 12+에서 필요)
+    await androidImplementation?.requestExactAlarmsPermission();
+    
+    // 알림 권한 요청
     await androidImplementation?.requestNotificationsPermission();
   }
 
@@ -44,20 +49,36 @@ class NotificationService {
     required String body,
     required DateTime scheduledDate,
   }) async {
+    // 시간을 오전 9시로 설정
+    final scheduledDateTime = DateTime(
+      scheduledDate.year,
+      scheduledDate.month,
+      scheduledDate.day,
+      9, // 오전 9시
+    );
+    
+    final tzScheduledDate = tz.TZDateTime.from(scheduledDateTime, tz.local);
+    
     await flutterLocalNotificationsPlugin.zonedSchedule(
       id,
       title,
       body,
-      tz.TZDateTime.from(scheduledDate, tz.local),
+      tzScheduledDate,
       const NotificationDetails(
         android: AndroidNotificationDetails(
           'refrigerator_channel_id',
-          'refrigerator_channel_name',
-          channelDescription: 'Channel for refrigerator notifications',
+          '유통기한 알림',
+          channelDescription: '냉장고 유통기한 알림 채널',
           importance: Importance.max,
           priority: Priority.high,
+          showWhen: true,
         ),
-        iOS: DarwinNotificationDetails(badgeNumber: 1),
+        iOS: DarwinNotificationDetails(
+          badgeNumber: 1,
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
       ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
@@ -67,5 +88,53 @@ class NotificationService {
 
   Future<void> cancelAllNotifications() async {
     await flutterLocalNotificationsPlugin.cancelAll();
+  }
+
+  Future<void> showTestNotification() async {
+    await flutterLocalNotificationsPlugin.show(
+      999,
+      '테스트 알림',
+      '알림 시스템이 정상적으로 작동합니다!',
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'refrigerator_channel_id',
+          '유통기한 알림',
+          channelDescription: '냉장고 유통기한 알림 채널',
+          importance: Importance.max,
+          priority: Priority.high,
+        ),
+      ),
+    );
+  }
+
+  Future<void> showImmediateExpiryAlert(String ingredientName, int daysLeft) async {
+    final String title;
+    final String body;
+    
+    if (daysLeft <= 0) {
+      title = '🚨 유통기한 초과!';
+      body = daysLeft == 0 
+          ? '$ingredientName의 유통기한이 오늘까지입니다!' 
+          : '$ingredientName의 유통기한이 ${-daysLeft}일 지났습니다!';
+    } else {
+      title = '⚠️ 유통기한 임박!';
+      body = '$ingredientName의 유통기한이 ${daysLeft}일 남았습니다!';
+    }
+    
+    await flutterLocalNotificationsPlugin.show(
+      ingredientName.hashCode,
+      title,
+      body,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'refrigerator_channel_id',
+          '유통기한 알림',
+          channelDescription: '냉장고 유통기한 알림 채널',
+          importance: Importance.max,
+          priority: Priority.high,
+          showWhen: true,
+        ),
+      ),
+    );
   }
 }
