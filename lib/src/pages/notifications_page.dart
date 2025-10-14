@@ -20,7 +20,10 @@ class NotificationsPage extends ConsumerWidget {
       appBar: AppBar(
         title: Row(
           children: [
-            const Text('알림', style: TextStyle(color: darkGray, fontWeight: FontWeight.bold)),
+            const Text(
+              '알림',
+              style: TextStyle(color: darkGray, fontWeight: FontWeight.bold),
+            ),
             if (notifications.isNotEmpty)
               Container(
                 margin: const EdgeInsets.only(left: 8),
@@ -31,7 +34,11 @@ class NotificationsPage extends ConsumerWidget {
                 ),
                 child: Text(
                   '${notifications.length}',
-                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
           ],
@@ -58,7 +65,10 @@ class NotificationsPage extends ConsumerWidget {
                           notificationsNotifier.clearAllNotifications();
                           Navigator.of(context).pop();
                         },
-                        child: const Text('삭제', style: TextStyle(color: Colors.red)),
+                        child: const Text(
+                          '삭제',
+                          style: TextStyle(color: Colors.red),
+                        ),
                       ),
                     ],
                   ),
@@ -75,14 +85,20 @@ class NotificationsPage extends ConsumerWidget {
           if (notifications.isNotEmpty) ...[
             const Text(
               '알림 목록',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: darkGray),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: darkGray,
+              ),
             ),
             const SizedBox(height: 12),
-            ...notifications.map((notification) => _buildNotificationItem(
-              context, 
-              notification, 
-              () => notificationsNotifier.removeNotification(notification.id)
-            )),
+            ...notifications.map(
+              (notification) => _buildNotificationItem(
+                context,
+                notification,
+                () => notificationsNotifier.removeNotification(notification.id),
+              ),
+            ),
             const SizedBox(height: 24),
             const Divider(),
             const SizedBox(height: 16),
@@ -95,11 +111,19 @@ class NotificationsPage extends ConsumerWidget {
               ),
               child: const Column(
                 children: [
-                  Icon(Icons.notifications_off_outlined, size: 48, color: mediumGray),
+                  Icon(
+                    Icons.notifications_off_outlined,
+                    size: 48,
+                    color: mediumGray,
+                  ),
                   SizedBox(height: 12),
                   Text(
                     '알림이 없습니다',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: mediumGray),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: mediumGray,
+                    ),
                   ),
                   SizedBox(height: 4),
                   Text(
@@ -112,23 +136,39 @@ class NotificationsPage extends ConsumerWidget {
             ),
             const SizedBox(height: 24),
           ],
-          
+
           // 설정 섹션
           const Text(
             '알림 설정',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: darkGray),
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: darkGray,
+            ),
           ),
           const SizedBox(height: 12),
           Card(
             elevation: 0,
             color: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: SwitchListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              title: const Text('유통기한 알림 받기', style: TextStyle(fontWeight: FontWeight.w600)),
-              subtitle: const Text('설정한 기간에 따라 유통기한 임박 알림을 보냅니다.', style: TextStyle(color: mediumGray)),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 10,
+              ),
+              title: const Text(
+                '유통기한 알림 받기',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              subtitle: const Text(
+                '설정한 기간에 따라 유통기한 임박 알림을 보냅니다.',
+                style: TextStyle(color: mediumGray),
+              ),
               value: settings.notificationsEnabled,
-              onChanged: (bool value) => settingsNotifier.toggleNotifications(value),
+              onChanged: (bool value) =>
+                  settingsNotifier.toggleNotifications(value),
               activeThumbColor: accentColor,
             ),
           ),
@@ -136,11 +176,22 @@ class NotificationsPage extends ConsumerWidget {
           Card(
             elevation: 0,
             color: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              title: const Text('알림 시기 설정', style: TextStyle(fontWeight: FontWeight.w600)),
-              trailing: Text('${settings.daysBefore}일 전', style: const TextStyle(color: mediumGray, fontSize: 16)),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 10,
+              ),
+              title: const Text(
+                '알림 시기 설정',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              trailing: Text(
+                '${settings.daysBefore}일 전',
+                style: const TextStyle(color: mediumGray, fontSize: 16),
+              ),
               enabled: settings.notificationsEnabled,
               onTap: () {
                 if (settings.notificationsEnabled) {
@@ -165,7 +216,9 @@ class NotificationsPage extends ConsumerWidget {
                           );
                         }).toList(),
                       ),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   );
                 }
@@ -177,14 +230,27 @@ class NotificationsPage extends ConsumerWidget {
           Card(
             elevation: 0,
             color: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              title: const Text('알림 테스트', style: TextStyle(fontWeight: FontWeight.w600)),
-              subtitle: const Text('알림이 정상적으로 작동하는지 테스트합니다.', style: TextStyle(color: mediumGray)),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 10,
+              ),
+              title: const Text(
+                '알림 테스트',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              subtitle: const Text(
+                '알림이 정상적으로 작동하는지 테스트합니다.',
+                style: TextStyle(color: mediumGray),
+              ),
               trailing: ElevatedButton(
                 onPressed: () async {
-                  final notificationService = await ref.read(notificationServiceProvider.future);
+                  final notificationService = await ref.read(
+                    notificationServiceProvider.future,
+                  );
                   await notificationService.showTestNotification();
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -205,38 +271,60 @@ class NotificationsPage extends ConsumerWidget {
           Card(
             elevation: 0,
             color: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              title: const Text('임박 재료 즉시 알림', style: TextStyle(fontWeight: FontWeight.w600)),
-              subtitle: const Text('유통기한이 임박한 재료들을 바로 확인합니다.', style: TextStyle(color: mediumGray)),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 10,
+              ),
+              title: const Text(
+                '임박 재료 즉시 알림',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              subtitle: const Text(
+                '유통기한이 임박한 재료들을 바로 확인합니다.',
+                style: TextStyle(color: mediumGray),
+              ),
               trailing: ElevatedButton(
                 onPressed: () async {
-                  final notificationService = await ref.read(notificationServiceProvider.future);
+                  final notificationService = await ref.read(
+                    notificationServiceProvider.future,
+                  );
                   final ingredientsValue = ref.read(ingredientsProvider);
-                  
+
                   if (ingredientsValue.hasValue) {
                     final ingredients = ingredientsValue.value!;
                     final now = DateTime.now();
                     int alertCount = 0;
-                    
+
                     for (final ingredient in ingredients) {
-                      final daysLeft = ingredient.expiryDate.difference(now).inDays;
-                      if (daysLeft <= 3) { // 3일 이내
+                      final daysLeft = ingredient.expiryDate
+                          .difference(now)
+                          .inDays;
+                      if (daysLeft <= 3) {
+                        // 3일 이내
                         await notificationService.showImmediateExpiryAlert(
-                          ingredient.name, 
-                          daysLeft
+                          ingredient.name,
+                          daysLeft,
                         );
                         alertCount++;
-                        await Future.delayed(const Duration(milliseconds: 500)); // 알림 간격
+                        await Future.delayed(
+                          const Duration(milliseconds: 500),
+                        ); // 알림 간격
                       }
                     }
-                    
+
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(alertCount > 0 
-                            ? '$alertCount개의 임박 재료 알림을 전송했습니다!' 
-                            : '임박한 재료가 없습니다.')),
+                        SnackBar(
+                          content: Text(
+                            alertCount > 0
+                                ? '$alertCount개의 임박 재료 알림을 전송했습니다!'
+                                : '임박한 재료가 없습니다.',
+                          ),
+                        ),
                       );
                     }
                   }
@@ -254,7 +342,11 @@ class NotificationsPage extends ConsumerWidget {
             padding: EdgeInsets.symmetric(horizontal: 16.0),
             child: Text(
               '알림은 설정된 시간(오전 9시)에 전송됩니다. 테스트 알림으로 먼저 확인해보세요.',
-              style: TextStyle(color: mediumGray, fontStyle: FontStyle.italic, fontSize: 12),
+              style: TextStyle(
+                color: mediumGray,
+                fontStyle: FontStyle.italic,
+                fontSize: 12,
+              ),
               textAlign: TextAlign.center,
             ),
           ),
@@ -263,10 +355,14 @@ class NotificationsPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildNotificationItem(BuildContext context, NotificationItem notification, VoidCallback onRemove) {
+  Widget _buildNotificationItem(
+    BuildContext context,
+    NotificationItem notification,
+    VoidCallback onRemove,
+  ) {
     Color priorityColor;
     IconData priorityIcon;
-    
+
     switch (notification.priority) {
       case NotificationPriority.urgent:
         priorityColor = Colors.red;
@@ -289,7 +385,10 @@ class NotificationsPage extends ConsumerWidget {
         color: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 8,
+          ),
           leading: CircleAvatar(
             backgroundColor: priorityColor.withOpacity(0.1),
             child: Icon(priorityIcon, color: priorityColor, size: 20),
@@ -302,10 +401,7 @@ class NotificationsPage extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 4),
-              Text(
-                notification.message,
-                style: const TextStyle(fontSize: 13),
-              ),
+              Text(notification.message, style: const TextStyle(fontSize: 13)),
               const SizedBox(height: 4),
               Text(
                 _formatNotificationTime(notification.createdAt),
@@ -346,7 +442,10 @@ class NotificationsPage extends ConsumerWidget {
                       onRemove();
                       Navigator.of(context).pop();
                     },
-                    child: const Text('삭제', style: TextStyle(color: Colors.red)),
+                    child: const Text(
+                      '삭제',
+                      style: TextStyle(color: Colors.red),
+                    ),
                   ),
                 ],
               ),

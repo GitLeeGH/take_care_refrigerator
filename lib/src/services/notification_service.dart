@@ -1,4 +1,3 @@
-
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
@@ -19,26 +18,29 @@ class NotificationService {
     // iOS 초기화 설정
     const DarwinInitializationSettings initializationSettingsIOS =
         DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
-    );
+          requestAlertPermission: true,
+          requestBadgePermission: true,
+          requestSoundPermission: true,
+        );
 
-    final InitializationSettings initializationSettings = InitializationSettings(
-      android: initializationSettingsAndroid,
-      iOS: initializationSettingsIOS,
-    );
+    final InitializationSettings initializationSettings =
+        InitializationSettings(
+          android: initializationSettingsAndroid,
+          iOS: initializationSettingsIOS,
+        );
 
     await flutterLocalNotificationsPlugin.initialize(initializationSettings);
 
     // Android 알림 권한 요청
     final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
-        flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
-    
+        flutterLocalNotificationsPlugin
+            .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin
+            >();
+
     // 정확한 알람 권한 요청 (Android 12+에서 필요)
     await androidImplementation?.requestExactAlarmsPermission();
-    
+
     // 알림 권한 요청
     await androidImplementation?.requestNotificationsPermission();
   }
@@ -56,9 +58,9 @@ class NotificationService {
       scheduledDate.day,
       9, // 오전 9시
     );
-    
+
     final tzScheduledDate = tz.TZDateTime.from(scheduledDateTime, tz.local);
-    
+
     await flutterLocalNotificationsPlugin.zonedSchedule(
       id,
       title,
@@ -107,20 +109,23 @@ class NotificationService {
     );
   }
 
-  Future<void> showImmediateExpiryAlert(String ingredientName, int daysLeft) async {
+  Future<void> showImmediateExpiryAlert(
+    String ingredientName,
+    int daysLeft,
+  ) async {
     final String title;
     final String body;
-    
+
     if (daysLeft <= 0) {
       title = '🚨 유통기한 초과!';
-      body = daysLeft == 0 
-          ? '$ingredientName의 유통기한이 오늘까지입니다!' 
+      body = daysLeft == 0
+          ? '$ingredientName의 유통기한이 오늘까지입니다!'
           : '$ingredientName의 유통기한이 ${-daysLeft}일 지났습니다!';
     } else {
       title = '⚠️ 유통기한 임박!';
       body = '$ingredientName의 유통기한이 ${daysLeft}일 남았습니다!';
     }
-    
+
     await flutterLocalNotificationsPlugin.show(
       ingredientName.hashCode,
       title,

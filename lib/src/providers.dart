@@ -20,11 +20,10 @@ class NotificationSettings {
   NotificationSettings copyWith({
     bool? notificationsEnabled,
     int? daysBefore,
-  }) =>
-      NotificationSettings(
-        notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
-        daysBefore: daysBefore ?? this.daysBefore,
-      );
+  }) => NotificationSettings(
+    notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
+    daysBefore: daysBefore ?? this.daysBefore,
+  );
 }
 
 // 알림 아이템 모델
@@ -72,7 +71,7 @@ class NotificationListNotifier extends StateNotifier<List<NotificationItem>> {
 
     for (final ingredient in ingredients) {
       final daysLeft = ingredient.expiryDate.difference(now).inDays;
-      
+
       if (daysLeft <= 3) {
         final NotificationPriority priority;
         final String title;
@@ -81,8 +80,8 @@ class NotificationListNotifier extends StateNotifier<List<NotificationItem>> {
         if (daysLeft <= 0) {
           priority = NotificationPriority.urgent;
           title = '🚨 유통기한 초과!';
-          message = daysLeft == 0 
-              ? '${ingredient.name}의 유통기한이 오늘까지입니다' 
+          message = daysLeft == 0
+              ? '${ingredient.name}의 유통기한이 오늘까지입니다'
               : '${ingredient.name}의 유통기한이 ${-daysLeft}일 지났습니다';
         } else if (daysLeft == 1) {
           priority = NotificationPriority.urgent;
@@ -96,15 +95,17 @@ class NotificationListNotifier extends StateNotifier<List<NotificationItem>> {
 
         // 이미 같은 재료에 대한 알림이 있는지 확인
         if (!state.any((n) => n.ingredientId == ingredient.id)) {
-          newNotifications.add(NotificationItem(
-            id: '${ingredient.id}_${DateTime.now().millisecondsSinceEpoch}',
-            title: title,
-            message: message,
-            createdAt: now,
-            ingredientId: ingredient.id,
-            daysLeft: daysLeft,
-            priority: priority,
-          ));
+          newNotifications.add(
+            NotificationItem(
+              id: '${ingredient.id}_${DateTime.now().millisecondsSinceEpoch}',
+              title: title,
+              message: message,
+              createdAt: now,
+              ingredientId: ingredient.id,
+              daysLeft: daysLeft,
+              priority: priority,
+            ),
+          );
         }
       }
     }
@@ -123,14 +124,19 @@ final supabaseProvider = Provider<SupabaseClient>(
   (ref) => Supabase.instance.client,
 );
 
-final userProfileProvider = FutureProvider.autoDispose<UserProfile?>((ref) async {
+final userProfileProvider = FutureProvider.autoDispose<UserProfile?>((
+  ref,
+) async {
   final supabase = ref.watch(supabaseProvider);
   final user = supabase.auth.currentUser;
   if (user == null) return null;
 
   try {
-    final response =
-        await supabase.from('profiles').select('role').eq('id', user.id).single();
+    final response = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
     final profileData = Map<String, dynamic>.from(response);
     profileData['id'] = user.id;
     return UserProfile.fromJson(profileData);
@@ -151,10 +157,11 @@ final ingredientsProvider = StreamProvider.autoDispose<List<Ingredient>>((ref) {
       .eq('user_id', user.id)
       .order('expiry_date', ascending: true)
       .listen((data) {
-    final ingredients =
-        data.map((item) => Ingredient.fromJson(item)).toList();
-    controller.add(ingredients);
-  });
+        final ingredients = data
+            .map((item) => Ingredient.fromJson(item))
+            .toList();
+        controller.add(ingredients);
+      });
 
   ref.onDispose(() {
     subscription.cancel();
@@ -170,9 +177,11 @@ final ingredientsProvider = StreamProvider.autoDispose<List<Ingredient>>((ref) {
 
 // --- UI State Providers ---
 enum RecipeSortType { recommended, popular, recent }
+
 final searchQueryProvider = StateProvider<String>((ref) => '');
-final recipeSortProvider =
-    StateProvider<RecipeSortType>((ref) => RecipeSortType.recommended);
+final recipeSortProvider = StateProvider<RecipeSortType>(
+  (ref) => RecipeSortType.recommended,
+);
 
 // Provider for the 'can make only' filter
 final canMakeFilterProvider = StateProvider<bool>((ref) => false);
@@ -180,7 +189,9 @@ final canMakeFilterProvider = StateProvider<bool>((ref) => false);
 // --- Data Fetching Providers for Recipe IDs ---
 
 // 1. Recommended Sort (uses the new RPC function)
-final recommendedIdsProvider = FutureProvider.autoDispose<List<String>>((ref) async {
+final recommendedIdsProvider = FutureProvider.autoDispose<List<String>>((
+  ref,
+) async {
   final supabase = ref.watch(supabaseProvider);
   final ingredientsAsync = ref.watch(ingredientsProvider);
 
@@ -203,7 +214,9 @@ final recommendedIdsProvider = FutureProvider.autoDispose<List<String>>((ref) as
 });
 
 // 2. Popular Sort
-final popularIdsProvider = FutureProvider.autoDispose<List<String>>((ref) async {
+final popularIdsProvider = FutureProvider.autoDispose<List<String>>((
+  ref,
+) async {
   final supabase = ref.watch(supabaseProvider);
   final searchQuery = ref.watch(searchQueryProvider);
 
@@ -282,11 +295,17 @@ class PaginatedRecipesNotifier extends StateNotifier<PaginatedRecipesState> {
       };
 
       _sortedRecipeIds = await idsFuture;
-      debugPrint('[Recipes] Total sorted recipe IDs fetched: ${_sortedRecipeIds.length}');
+      debugPrint(
+        '[Recipes] Total sorted recipe IDs fetched: ${_sortedRecipeIds.length}',
+      );
 
       _page = 0;
       // Reset state, and critically, set isLoading to false before calling fetchNextPage
-      state = const PaginatedRecipesState(recipes: [], hasMore: true, isLoading: false);
+      state = const PaginatedRecipesState(
+        recipes: [],
+        hasMore: true,
+        isLoading: false,
+      );
       await fetchNextPage();
     } catch (e, s) {
       state = state.copyWith(isLoading: false, hasMore: false);
@@ -310,16 +329,19 @@ class PaginatedRecipesNotifier extends StateNotifier<PaginatedRecipesState> {
       }
 
       final to = from + _pageSize - 1;
-      final idsToFetch = _sortedRecipeIds.sublist(from, 
-        to + 1 > _sortedRecipeIds.length ? _sortedRecipeIds.length : to + 1
+      final idsToFetch = _sortedRecipeIds.sublist(
+        from,
+        to + 1 > _sortedRecipeIds.length ? _sortedRecipeIds.length : to + 1,
       );
 
       if (idsToFetch.isEmpty) {
-        debugPrint('[Recipes] No IDs to fetch for page $_page. Setting hasMore to false.');
+        debugPrint(
+          '[Recipes] No IDs to fetch for page $_page. Setting hasMore to false.',
+        );
         state = state.copyWith(isLoading: false, hasMore: false);
         return;
       }
-      
+
       debugPrint('[Recipes] Fetching page $_page with IDs: $idsToFetch');
 
       final response = await ref
@@ -328,12 +350,21 @@ class PaginatedRecipesNotifier extends StateNotifier<PaginatedRecipesState> {
           .select()
           .filter('id', 'in', idsToFetch);
 
-      final newRecipes = (response as List).map((item) => Recipe.fromJson(item)).toList();
-      debugPrint('[Recipes] Fetched ${newRecipes.length} recipe details for page $_page');
+      final newRecipes = (response as List)
+          .map((item) => Recipe.fromJson(item))
+          .toList();
+      debugPrint(
+        '[Recipes] Fetched ${newRecipes.length} recipe details for page $_page',
+      );
 
       // Preserve the sorted order from the ID list
       final orderedNewRecipes = idsToFetch
-          .map((id) => newRecipes.firstWhere((recipe) => recipe.id == id, orElse: () => Recipe.fromJson({})))
+          .map(
+            (id) => newRecipes.firstWhere(
+              (recipe) => recipe.id == id,
+              orElse: () => Recipe.fromJson({}),
+            ),
+          )
           .where((r) => r.id.isNotEmpty)
           .toList();
 
@@ -351,61 +382,72 @@ class PaginatedRecipesNotifier extends StateNotifier<PaginatedRecipesState> {
 }
 
 // The StateNotifierProvider
-final paginatedRecipesProvider = StateNotifierProvider.autoDispose<
-    PaginatedRecipesNotifier, PaginatedRecipesState>((ref) {
-  final notifier = PaginatedRecipesNotifier(ref);
+final paginatedRecipesProvider =
+    StateNotifierProvider.autoDispose<
+      PaginatedRecipesNotifier,
+      PaginatedRecipesState
+    >((ref) {
+      final notifier = PaginatedRecipesNotifier(ref);
 
-  // Call init when the provider is first created.
-  notifier.init();
-
-  // When sort type or search query changes, re-initialize the notifier.
-  ref.listen(recipeSortProvider, (_, __) => notifier.init());
-  ref.listen(searchQueryProvider, (_, __) {
-    // We debounce this slightly to avoid re-initializing on every keystroke.
-    final timer = Timer(const Duration(milliseconds: 500), () {
+      // Call init when the provider is first created.
       notifier.init();
+
+      // When sort type or search query changes, re-initialize the notifier.
+      ref.listen(recipeSortProvider, (_, __) => notifier.init());
+      ref.listen(searchQueryProvider, (_, __) {
+        // We debounce this slightly to avoid re-initializing on every keystroke.
+        final timer = Timer(const Duration(milliseconds: 500), () {
+          notifier.init();
+        });
+        ref.onDispose(() => timer.cancel());
+      });
+
+      // Also, when the recommended IDs change (e.g. after ingredients load),
+      // re-init if we are currently sorted by recommended.
+      ref.listen(recommendedIdsProvider, (_, __) {
+        if (ref.read(recipeSortProvider) == RecipeSortType.recommended) {
+          notifier.init();
+        }
+      });
+
+      return notifier;
     });
-    ref.onDispose(() => timer.cancel());
-  });
-
-  // Also, when the recommended IDs change (e.g. after ingredients load),
-  // re-init if we are currently sorted by recommended.
-  ref.listen(recommendedIdsProvider, (_, __) {
-    if (ref.read(recipeSortProvider) == RecipeSortType.recommended) {
-      notifier.init();
-    }
-  });
-
-  return notifier;
-});
 
 // Provider to fetch shelf life data from Supabase
-final shelfLifeDataProvider = FutureProvider.autoDispose<Map<String, int>>((ref) async {
+final shelfLifeDataProvider = FutureProvider.autoDispose<Map<String, int>>((
+  ref,
+) async {
   final supabase = ref.watch(supabaseProvider);
   final response = await supabase.from('shelf_life_data').select('name, days');
 
   final Map<String, int> shelfLifeMap = {
-    for (var item in response)
-      item['name'] as String: item['days'] as int,
+    for (var item in response) item['name'] as String: item['days'] as int,
   };
 
   return shelfLifeMap;
 });
 
 // Provider to get all recipes at once, for features that need the full list.
-final allRecipesListProvider = FutureProvider.autoDispose<List<Recipe>>((ref) async {
+final allRecipesListProvider = FutureProvider.autoDispose<List<Recipe>>((
+  ref,
+) async {
   final supabase = ref.watch(supabaseProvider);
   final response = await supabase.from('recipes').select();
   return (response as List).map((item) => Recipe.fromJson(item)).toList();
 });
 
 // Provider for recommending recipes based on expiring ingredients
-final expiringIngredientsRecipesProvider = Provider.autoDispose<List<Recipe>>((ref) {
+final expiringIngredientsRecipesProvider = Provider.autoDispose<List<Recipe>>((
+  ref,
+) {
   final ingredientsValue = ref.watch(ingredientsProvider);
   final allRecipesValue = ref.watch(allRecipesListProvider);
 
   // Return empty list if either provider is not ready
-  if (ingredientsValue.isLoading || allRecipesValue.isLoading || ingredientsValue.hasError || allRecipesValue.hasError) {
+  if (ingredientsValue.isLoading ||
+      allRecipesValue.isLoading ||
+      ingredientsValue.hasError ||
+      allRecipesValue.hasError) {
     return [];
   }
 
@@ -413,16 +455,23 @@ final expiringIngredientsRecipesProvider = Provider.autoDispose<List<Recipe>>((r
   final allRecipes = allRecipesValue.asData!.value;
 
   // Find ingredients expiring within 3 days
-  final expiringIngredients = ingredients.where((i) =>
-    !i.expiryDate.isBefore(DateTime.now()) && // Filter out already expired
-    i.expiryDate.difference(DateTime.now()).inDays < 3
-  ).toList();
+  final expiringIngredients = ingredients
+      .where(
+        (i) =>
+            !i.expiryDate.isBefore(
+              DateTime.now(),
+            ) && // Filter out already expired
+            i.expiryDate.difference(DateTime.now()).inDays < 3,
+      )
+      .toList();
 
   if (expiringIngredients.isEmpty) {
     return [];
   }
 
-  final expiringIngredientNames = expiringIngredients.map((e) => e.name).toSet();
+  final expiringIngredientNames = expiringIngredients
+      .map((e) => e.name)
+      .toSet();
 
   // Find recipes that use at least one of the expiring ingredients
   final recommended = allRecipes.where((recipe) {
@@ -432,8 +481,14 @@ final expiringIngredientsRecipesProvider = Provider.autoDispose<List<Recipe>>((r
 
   // Sort by the number of expiring ingredients used
   recommended.sort((a, b) {
-    final aCount = a.requiredIngredients.toSet().intersection(expiringIngredientNames).length;
-    final bCount = b.requiredIngredients.toSet().intersection(expiringIngredientNames).length;
+    final aCount = a.requiredIngredients
+        .toSet()
+        .intersection(expiringIngredientNames)
+        .length;
+    final bCount = b.requiredIngredients
+        .toSet()
+        .intersection(expiringIngredientNames)
+        .length;
     return bCount.compareTo(aCount);
   });
 
@@ -441,7 +496,9 @@ final expiringIngredientsRecipesProvider = Provider.autoDispose<List<Recipe>>((r
 });
 
 // A final provider that applies the search query to the paginated list
-final filteredPaginatedRecipesProvider = Provider.autoDispose<List<Recipe>>((ref) {
+final filteredPaginatedRecipesProvider = Provider.autoDispose<List<Recipe>>((
+  ref,
+) {
   final state = ref.watch(paginatedRecipesProvider);
   final searchQuery = ref.watch(searchQueryProvider);
   final sortType = ref.watch(recipeSortProvider);
@@ -455,7 +512,9 @@ final filteredPaginatedRecipesProvider = Provider.autoDispose<List<Recipe>>((ref
   if (canMakeOnly) {
     recipes = recipes.where((recipe) {
       final required = recipe.requiredIngredients.toSet();
-      return required.every((ingredient) => myIngredientNames.contains(ingredient));
+      return required.every(
+        (ingredient) => myIngredientNames.contains(ingredient),
+      );
     }).toList();
   }
 
@@ -468,7 +527,6 @@ final filteredPaginatedRecipesProvider = Provider.autoDispose<List<Recipe>>((ref
 
   return recipes;
 });
-
 
 // =======================================================================
 // Other Providers (Likes, Notifications, etc.)
@@ -487,7 +545,9 @@ final likedRecipeIdsProvider = StreamProvider.autoDispose<Set<String>>((ref) {
 });
 
 // Provider to get the full Recipe objects for the liked recipes
-final likedRecipesProvider = FutureProvider.autoDispose<List<Recipe>>((ref) async {
+final likedRecipesProvider = FutureProvider.autoDispose<List<Recipe>>((
+  ref,
+) async {
   final supabase = ref.watch(supabaseProvider);
   final likedIds = ref.watch(likedRecipeIdsProvider).asData?.value;
 
@@ -495,7 +555,10 @@ final likedRecipesProvider = FutureProvider.autoDispose<List<Recipe>>((ref) asyn
     return [];
   }
 
-  final response = await supabase.from('recipes').select().filter('id', 'in', likedIds.toList());
+  final response = await supabase
+      .from('recipes')
+      .select()
+      .filter('id', 'in', likedIds.toList());
   return (response as List).map((item) => Recipe.fromJson(item)).toList();
 });
 
@@ -507,14 +570,15 @@ final likeRecipeProvider = Provider.autoDispose((ref) {
     if (user == null) return;
 
     if (isLiked) {
-      await supabase
-          .from('recipe_likes')
-          .delete()
-          .match({'user_id': user.id, 'recipe_id': recipeId});
+      await supabase.from('recipe_likes').delete().match({
+        'user_id': user.id,
+        'recipe_id': recipeId,
+      });
     } else {
-      await supabase
-          .from('recipe_likes')
-          .insert({'user_id': user.id, 'recipe_id': recipeId});
+      await supabase.from('recipe_likes').insert({
+        'user_id': user.id,
+        'recipe_id': recipeId,
+      });
     }
     ref.invalidate(likedRecipeIdsProvider); // Force the liked IDs to refetch
     ref.invalidate(popularIdsProvider); // Invalidate to refetch sorted IDs
@@ -524,12 +588,13 @@ final likeRecipeProvider = Provider.autoDispose((ref) {
 });
 
 // Provider that creates and initializes the NotificationService
-final notificationServiceProvider = FutureProvider<NotificationService>((ref) async {
+final notificationServiceProvider = FutureProvider<NotificationService>((
+  ref,
+) async {
   final service = NotificationService();
   await service.init();
   return service;
 });
-
 
 final notificationSchedulerProvider = Provider.autoDispose((ref) {
   // Notifications are not supported on web, so disable this provider.
@@ -547,31 +612,37 @@ final notificationSchedulerProvider = Provider.autoDispose((ref) {
 
     if (settings.notificationsEnabled) {
       notificationService.cancelAllNotifications();
-      
+
       final now = DateTime.now();
       int scheduledCount = 0;
-      
+
       for (final ingredient in ingredients) {
         final expiryDate = ingredient.expiryDate;
         final daysUntilExpiry = expiryDate.difference(now).inDays;
-        
+
         // 유통기한이 이미 지났거나 오늘인 경우 즉시 알림
         if (daysUntilExpiry <= 0) {
           notificationService.scheduleNotification(
             id: ingredient.id.hashCode,
             title: '🚨 유통기한 초과!',
-            body: '${ingredient.name}의 유통기한이 ${daysUntilExpiry == 0 ? '오늘까지' : '${-daysUntilExpiry}일 지남'}입니다!',
+            body:
+                '${ingredient.name}의 유통기한이 ${daysUntilExpiry == 0 ? '오늘까지' : '${-daysUntilExpiry}일 지남'}입니다!',
             scheduledDate: now.add(const Duration(minutes: 1)), // 1분 후 즉시 알림
           );
           scheduledCount++;
-          print('즉시 알림 예약: ${ingredient.name} (유통기한 ${daysUntilExpiry == 0 ? '오늘' : '${-daysUntilExpiry}일 지남'})');
+          print(
+            '즉시 알림 예약: ${ingredient.name} (유통기한 ${daysUntilExpiry == 0 ? '오늘' : '${-daysUntilExpiry}일 지남'})',
+          );
         }
         // 설정된 일수 이내에 유통기한이 도래하는 경우
         else if (daysUntilExpiry <= settings.daysBefore) {
           final notificationDate = DateTime(
-            now.year, now.month, now.day + 1, 9 // 내일 오전 9시
+            now.year,
+            now.month,
+            now.day + 1,
+            9, // 내일 오전 9시
           );
-          
+
           notificationService.scheduleNotification(
             id: ingredient.id.hashCode,
             title: '⚠️ 유통기한 임박 알림',
@@ -583,15 +654,17 @@ final notificationSchedulerProvider = Provider.autoDispose((ref) {
         }
         // 정상적인 미래 알림
         else {
-          final notificationDate = expiryDate.subtract(Duration(days: settings.daysBefore));
+          final notificationDate = expiryDate.subtract(
+            Duration(days: settings.daysBefore),
+          );
           if (notificationDate.isAfter(now)) {
             final scheduledDateTime = DateTime(
               notificationDate.year,
-              notificationDate.month, 
+              notificationDate.month,
               notificationDate.day,
-              9 // 오전 9시
+              9, // 오전 9시
             );
-            
+
             notificationService.scheduleNotification(
               id: ingredient.id.hashCode,
               title: '유통기한 임박 알림',
@@ -599,11 +672,13 @@ final notificationSchedulerProvider = Provider.autoDispose((ref) {
               scheduledDate: scheduledDateTime,
             );
             scheduledCount++;
-            print('정규 알림 예약: ${ingredient.name} - ${scheduledDateTime.toString()}');
+            print(
+              '정규 알림 예약: ${ingredient.name} - ${scheduledDateTime.toString()}',
+            );
           }
         }
       }
-      
+
       print('총 $scheduledCount개의 알림이 예약되었습니다.');
     }
   }
@@ -611,7 +686,7 @@ final notificationSchedulerProvider = Provider.autoDispose((ref) {
 
 class NotificationSettingsNotifier extends StateNotifier<NotificationSettings> {
   NotificationSettingsNotifier()
-      : super(NotificationSettings(notificationsEnabled: true, daysBefore: 3));
+    : super(NotificationSettings(notificationsEnabled: true, daysBefore: 3));
 
   void toggleNotifications(bool enabled) =>
       state = state.copyWith(notificationsEnabled: enabled);
@@ -619,24 +694,26 @@ class NotificationSettingsNotifier extends StateNotifier<NotificationSettings> {
 }
 
 final notificationSettingsProvider =
-    StateNotifierProvider<NotificationSettingsNotifier, NotificationSettings>(
-  (ref,) {
-    return NotificationSettingsNotifier();
-  },
-);
-
-final notificationListProvider = 
-    StateNotifierProvider<NotificationListNotifier, List<NotificationItem>>(
-  (ref) {
-    final notifier = NotificationListNotifier();
-    
-    // 재료 목록이 변경될 때마다 알림 업데이트
-    ref.listen(ingredientsProvider, (_, ingredientsAsync) {
-      if (ingredientsAsync.hasValue) {
-        notifier.generateNotificationsFromIngredients(ingredientsAsync.value!);
-      }
+    StateNotifierProvider<NotificationSettingsNotifier, NotificationSettings>((
+      ref,
+    ) {
+      return NotificationSettingsNotifier();
     });
-    
-    return notifier;
-  },
-);
+
+final notificationListProvider =
+    StateNotifierProvider<NotificationListNotifier, List<NotificationItem>>((
+      ref,
+    ) {
+      final notifier = NotificationListNotifier();
+
+      // 재료 목록이 변경될 때마다 알림 업데이트
+      ref.listen(ingredientsProvider, (_, ingredientsAsync) {
+        if (ingredientsAsync.hasValue) {
+          notifier.generateNotificationsFromIngredients(
+            ingredientsAsync.value!,
+          );
+        }
+      });
+
+      return notifier;
+    });

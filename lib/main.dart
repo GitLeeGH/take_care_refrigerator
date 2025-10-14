@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:app_links/app_links.dart';
 
 import 'src/theme.dart';
 import 'src/providers.dart';
@@ -21,7 +22,6 @@ Future<void> main() async {
   KakaoSdk.init(nativeAppKey: '5f221c04f30c10b07c1f376aedf67b61');
 
   // Temporary key hash code removed.
-
 
   final prefs = await SharedPreferences.getInstance();
   final hasSeenOnboarding = prefs.getBool('hasSeenOnboarding') ?? false;
@@ -59,22 +59,57 @@ class AuthChecker extends ConsumerStatefulWidget {
 }
 
 class _AuthCheckerState extends ConsumerState<AuthChecker> {
+  late AppLinks _appLinks;
+
+  @override
+  void initState() {
+    super.initState();
+    _initDeepLinks();
+  }
+
+  Future<void> _initDeepLinks() async {
+    _appLinks = AppLinks();
+
+    // Handle incoming links when app is already running
+    _appLinks.uriLinkStream.listen((uri) {
+      print('Deep link received: $uri');
+      _handleDeepLink(uri);
+    });
+
+    // Handle incoming links when app is started from link
+    final initialUri = await _appLinks.getInitialLink();
+    if (initialUri != null) {
+      print('Initial deep link: $initialUri');
+      _handleDeepLink(initialUri);
+    }
+  }
+
+  void _handleDeepLink(Uri uri) {
+    print('Handling deep link: $uri');
+    // Supabase에서 deep link를 처리하도록 함
+    ref.read(supabaseProvider).auth.getSessionFromUrl(uri);
+  }
+
   @override
   Widget build(BuildContext context) {
     final supabase = ref.watch(supabaseProvider);
-    
+
     return StreamBuilder<AuthState>(
       stream: supabase.auth.onAuthStateChange,
-      initialData: AuthState(AuthChangeEvent.signedIn, supabase.auth.currentSession),
+      initialData: AuthState(
+        AuthChangeEvent.signedIn,
+        supabase.auth.currentSession,
+      ),
       builder: (context, snapshot) {
         final session = snapshot.data?.session ?? supabase.auth.currentSession;
-        
-        if (snapshot.connectionState == ConnectionState.waiting && session == null) {
+
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            session == null) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
-        
+
         if (session != null) {
           return const AppShell();
         } else {
@@ -143,9 +178,7 @@ class AppShell extends ConsumerWidget {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        Icon(
-          isActive ? Icons.notifications : Icons.notifications_outlined,
-        ),
+        Icon(isActive ? Icons.notifications : Icons.notifications_outlined),
         if (notificationCount > 0)
           Positioned(
             right: -6,
@@ -156,10 +189,7 @@ class AppShell extends ConsumerWidget {
                 color: Colors.red,
                 borderRadius: BorderRadius.circular(10),
               ),
-              constraints: const BoxConstraints(
-                minWidth: 16,
-                minHeight: 16,
-              ),
+              constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
               child: Text(
                 notificationCount > 99 ? '99+' : notificationCount.toString(),
                 style: const TextStyle(
