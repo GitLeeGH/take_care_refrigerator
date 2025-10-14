@@ -172,7 +172,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
-            return SingleChildScrollView( // 스크롤 가능하게 변경
+            return SingleChildScrollView(
+              // 스크롤 가능하게 변경
               padding: const EdgeInsets.all(24.0),
               child: ConstrainedBox(
                 constraints: BoxConstraints(
@@ -182,8 +183,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    SizedBox(height: constraints.maxHeight * 0.1), // 상단 여백을 고정값으로
-                    const Icon(Icons.kitchen_outlined, size: 80, color: primaryGreen),
+                    SizedBox(
+                      height: constraints.maxHeight * 0.1,
+                    ), // 상단 여백을 고정값으로
+                    const Icon(
+                      Icons.kitchen_outlined,
+                      size: 80,
+                      color: primaryGreen,
+                    ),
                     const SizedBox(height: 20),
                     const Text(
                       '냉장고를 부탁해',
@@ -207,7 +214,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       _buildEmailForm()
                     else
                       _buildInitialActions(),
-                    SizedBox(height: constraints.maxHeight * 0.05), // 하단 여백을 고정값으로
+                    SizedBox(
+                      height: constraints.maxHeight * 0.05,
+                    ), // 하단 여백을 고정값으로
                   ],
                 ),
               ),
