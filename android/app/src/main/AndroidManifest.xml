@@ -10,7 +10,7 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     
     <application
-        android:label="take_care_refrigerator"
+        android:label="냉장고를 부탁해"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
