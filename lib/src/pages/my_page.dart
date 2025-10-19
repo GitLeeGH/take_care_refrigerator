@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models.dart';
 import '../providers.dart';
 import '../theme.dart';
 import 'add_recipe_page.dart';
 import 'recipes_page.dart'; // For RecipeDetailPage
+import 'login_page.dart';
 
 class MyPage extends ConsumerWidget {
   const MyPage({super.key});
@@ -97,9 +100,218 @@ class MyPage extends ConsumerWidget {
               },
             ),
           ),
+          
+          // 계정 삭제 Card 추가
+          const SizedBox(height: 16),
+          Card(
+            elevation: 0,
+            color: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              leading: const Icon(Icons.delete_forever, color: Colors.red),
+              title: const Text('계정 삭제', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.red)),
+              onTap: () => _showDeleteAccountDialog(context, ref),
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  // 계정 삭제 확인 다이얼로그
+  void _showDeleteAccountDialog(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('계정 삭제'),
+          content: const Text('정말로 계정을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('취소'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _deleteAccount(context, ref);
+              },
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('삭제'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // 계정 삭제 함수
+  Future<void> _deleteAccount(BuildContext context, WidgetRef ref) async {
+    final supabase = ref.read(supabaseProvider);
+    final currentUser = supabase.auth.currentUser;
+    
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('로그인된 사용자가 없습니다.')),
+      );
+      return;
+    }
+
+    try {
+      // 로딩 다이얼로그 표시 (dismissible하게 설정)
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: true, // 백그라운드 터치로도 닫을 수 있게
+          builder: (ctx) {
+            return const AlertDialog(
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('계정을 삭제하고 있습니다...'),
+                ],
+              ),
+            );
+          },
+        );
+      }
+
+      print('계정 삭제 시작: ${currentUser.id}');
+      print('사용자 이메일: ${currentUser.email}');
+
+      // 🔥 즉시 로딩 다이얼로그 닫기 (서버 작업 전에)
+      print('🔥 즉시 로딩 다이얼로그 닫기 시도');
+      try {
+        if (context.mounted) {
+          Navigator.of(context, rootNavigator: true).pop();
+          print('✅ 로딩 다이얼로그 즉시 닫기 성공');
+        }
+      } catch (e) {
+        print('❌ 로딩 다이얼로그 즉시 닫기 실패: $e');
+      }
+      print('사용자 이메일: ${currentUser.email}');
+
+      // 서버에서 모든 사용자 데이터 삭제
+      print('서버 함수를 통한 계정 삭제 시도 중...');
+      print('현재 사용자 ID: ${currentUser.id}');
+      print('사용자 이메일: ${currentUser.email}');
+      
+      try {
+        print('RPC 함수 "delete_my_account" 호출 시작...');
+        final response = await supabase.rpc('delete_my_account');
+        print('계정 삭제 함수 응답 타입: ${response.runtimeType}');
+        print('계정 삭제 함수 응답 내용: $response');
+      } catch (e) {
+        print('서버 함수 오류: $e');
+      }
+
+      // Auth 사용자 삭제 시도
+      print('=== Auth 사용자 완전 삭제 시도 ===');
+      print('사용자 ID: ${currentUser.id}');
+      print('사용자 이메일: ${currentUser.email}');
+      
+      try {
+        await supabase.rpc('delete_auth_user', params: {'user_id': currentUser.id});
+        print('Auth 사용자 삭제 성공');
+      } catch (e) {
+        print('!  서버 함수 오류: $e');
+      }
+
+      // 삭제된 이메일 마크
+      final prefs = await SharedPreferences.getInstance();
+      if (currentUser.email != null) {
+        await prefs.setBool('deleted_email_${currentUser.email}', true);
+        print('삭제된 이메일 마크 설정: ${currentUser.email}');
+      }
+
+      // 완전한 세션 정리
+      print('=== 완전한 세션 정리 시작 ===');
+      
+      try {
+        print('글로벌 로그아웃 시도 중...');
+        await supabase.auth.signOut(scope: SignOutScope.global);
+        print('1. Supabase 글로벌 로그아웃 완료');
+        
+        // SharedPreferences 정리 (계정 삭제 플래그 포함)
+        final allKeys = prefs.getKeys();
+        print('정리 전 SharedPreferences 키들: $allKeys');
+        
+        await prefs.clear();
+        print('2. SharedPreferences 정리 완료 (계정 삭제 플래그 포함)');
+        
+        // 상태 정리 대기
+        await Future.delayed(const Duration(seconds: 1));
+        print('3. 정리 후 사용자: ${supabase.auth.currentUser}');
+        print('4. 정리 후 세션: ${supabase.auth.currentSession != null ? '있음' : '없음'}');
+        
+        final finalKeys = prefs.getKeys();
+        print('5. 정리 후 SharedPreferences 키들: $finalKeys');
+        
+        // OAuth 캐시 및 내부 저장소 정리
+        print('=== OAuth 캐시 및 내부 저장소 정리 시작 ===');
+        await supabase.auth.signOut(scope: SignOutScope.local);
+        
+        // OAuth 캐시 정리 마크
+        await prefs.setBool('oauth_cache_cleared', true);
+        await prefs.setInt('cache_clear_timestamp', DateTime.now().millisecondsSinceEpoch);
+        print('OAuth 캐시 정리 마크 설정 완료');
+        
+        print('최종 사용자: ${supabase.auth.currentUser}');
+        print('최종 세션: ${supabase.auth.currentSession != null ? '있음' : '없음'}');
+        print('=== 완전한 세션 정리 성공 ===');
+        
+      } catch (signOutError) {
+        print('로그아웃 중 오류: $signOutError');
+      }
+      
+      print('=== 완전한 세션 정리 완료 ===');
+
+      // 성공 메시지 및 안전한 로그인 페이지 이동
+      if (context.mounted) {
+        print('성공 메시지 표시 및 로그인 페이지 이동 시도');
+        try {
+          // 성공 메시지 표시 (짧게)
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('계정이 성공적으로 삭제되었습니다.'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 1),
+            ),
+          );
+          
+          // 잠시 대기 후 로그인 페이지로 이동
+          await Future.delayed(const Duration(milliseconds: 500));
+          
+          if (context.mounted) {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (context) => const LoginPage()),
+              (route) => false,
+            );
+            print('로그인 페이지 이동 완료');
+          }
+        } catch (navError) {
+          print('페이지 이동 실패: $navError');
+        }
+      }
+
+      print('계정 삭제 함수 완료');
+
+    } catch (e) {
+      print('계정 삭제 중 오류: $e');
+      
+      // 에러 메시지 표시 (로딩 다이얼로그는 이미 닫혔음)
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('계정 삭제 중 오류가 발생했습니다: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }
 
