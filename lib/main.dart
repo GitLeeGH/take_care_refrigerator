@@ -89,19 +89,19 @@ class _AuthCheckerState extends ConsumerState<AuthChecker> {
   void _handleDeepLink(Uri uri) async {
     print('🚨🚨🚨 NEW VERSION DEEP LINK HANDLER 실행됨!!! 🚨🚨🚨');
     print('Deep link received: $uri');
-    
+
     final supabase = ref.read(supabaseProvider);
     final currentUser = supabase.auth.currentUser;
     final currentSession = supabase.auth.currentSession;
-    
+
     print('현재 사용자: ${currentUser?.email}');
     print('현재 세션: ${currentSession != null ? '있음' : '없음'}');
-    
+
     // 기존 유효한 세션이 있으면 즉시 화면 전환
     if (currentUser != null && currentSession != null) {
       print('✅ 기존 세션 발견 - 강제 화면 전환 시작');
       print('🚨🚨🚨 네이게이터 로직 강제 실행 시작 🚨🚨🚨');
-      
+
       // 1차: 즉시 Navigator 실행
       if (mounted) {
         print('🚨 1차 시도: 즉시 Navigator 실행');
@@ -115,7 +115,7 @@ class _AuthCheckerState extends ConsumerState<AuthChecker> {
           print('1차 Navigator 실패: $e');
         }
       }
-      
+
       // 2차: SchedulerBinding으로 다음 프레임에서 Navigator 실행
       SchedulerBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -131,7 +131,7 @@ class _AuthCheckerState extends ConsumerState<AuthChecker> {
           }
         }
       });
-      
+
       // 3차: 딜레이 후 재시도
       Future.delayed(const Duration(milliseconds: 200), () {
         if (mounted) {
@@ -147,7 +147,7 @@ class _AuthCheckerState extends ConsumerState<AuthChecker> {
           }
         }
       });
-      
+
       // 4차: 더 긴 딜레이 후 최종 시도
       Future.delayed(const Duration(milliseconds: 1000), () {
         if (mounted) {
@@ -163,7 +163,7 @@ class _AuthCheckerState extends ConsumerState<AuthChecker> {
           }
         }
       });
-      
+
       // 추가로 세션 새로고침
       try {
         await supabase.auth.refreshSession();
@@ -171,10 +171,10 @@ class _AuthCheckerState extends ConsumerState<AuthChecker> {
       } catch (e) {
         print('세션 새로고침 실패: $e');
       }
-      
+
       return;
     }
-    
+
     // 새 로그인 처리
     try {
       print('새 로그인 시도...');
@@ -184,26 +184,26 @@ class _AuthCheckerState extends ConsumerState<AuthChecker> {
       print('=== Deep Link 처리 오류 ===');
       print('오류 타입: ${e.runtimeType}');
       print('오류 메시지: $e');
-      
+
       // Code Verifier 오류 처리
       if (e.toString().contains('Code verifier could not be found')) {
         print('💥 Code Verifier 오류 감지 - OAuth 캐시 정리 후 재시도');
-        
+
         try {
           // SharedPreferences에서 OAuth 관련 캐시 정리
           final prefs = await SharedPreferences.getInstance();
           await prefs.clear();
           print('✅ SharedPreferences 캐시 정리 완료');
-          
+
           // Supabase 로컬 스토리지도 정리
           await supabase.auth.signOut(scope: SignOutScope.local);
           print('✅ Supabase 로컬 스토리지 정리 완료');
-          
+
           // 잠시 대기 후 새로운 OAuth 시도 유도
           await Future.delayed(const Duration(milliseconds: 1000));
-          
+
           print('🚨 OAuth 캐시 정리 완료 - 사용자에게 다시 로그인 요청');
-          
+
           // 4중 Navigator 시도로 로그인 페이지로 이동
           // 1차: 즉시 실행
           if (mounted) {
@@ -218,7 +218,7 @@ class _AuthCheckerState extends ConsumerState<AuthChecker> {
               print('1차 Navigator 실패: $navError');
             }
           }
-          
+
           // 2차: SchedulerBinding
           SchedulerBinding.instance.addPostFrameCallback((_) {
             if (mounted) {
@@ -234,7 +234,7 @@ class _AuthCheckerState extends ConsumerState<AuthChecker> {
               }
             }
           });
-          
+
           // 3차: 딜레이 후
           Future.delayed(const Duration(milliseconds: 200), () {
             if (mounted) {
@@ -250,14 +250,13 @@ class _AuthCheckerState extends ConsumerState<AuthChecker> {
               }
             }
           });
-          
+
           print('🔄 로그인 페이지로 강제 이동 완료');
-          
         } catch (cleanupError) {
           print('OAuth 캐시 정리 중 오류: $cleanupError');
         }
       }
-      
+
       print('=== Deep Link 처리 완료 ===');
     }
   }
@@ -275,7 +274,7 @@ class _AuthCheckerState extends ConsumerState<AuthChecker> {
       builder: (context, snapshot) {
         final session = snapshot.data?.session ?? supabase.auth.currentSession;
         final currentUser = supabase.auth.currentUser;
-        
+
         print('🔍 StreamBuilder 상태 체크:');
         print('세션 존재: ${session != null}');
         print('사용자 존재: ${currentUser != null}');

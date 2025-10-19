@@ -17,10 +17,7 @@ void _showDeleteAccountDialog(BuildContext context, WidgetRef ref) {
       return AlertDialog(
         title: const Text(
           '계정 삭제',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.red,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
         ),
         content: const Column(
           mainAxisSize: MainAxisSize.min,
@@ -44,7 +41,7 @@ void _showDeleteAccountDialog(BuildContext context, WidgetRef ref) {
             Text(
               '이 작업은 되돌릴 수 없습니다.',
               style: TextStyle(
-                fontSize: 14, 
+                fontSize: 14,
                 color: Colors.red,
                 fontWeight: FontWeight.w600,
               ),
@@ -98,7 +95,7 @@ Future<void> _deleteAccount(BuildContext context, WidgetRef ref) async {
 
     // 1. 사용자 관련 데이터 삭제
     print('사용자 데이터 삭제 시작: ${user.id}');
-    
+
     // 사용자 식재료 데이터 삭제 (냉장고 아이템)
     try {
       await supabase.from('ingredients').delete().eq('user_id', user.id);
@@ -153,7 +150,7 @@ Future<void> _deleteAccount(BuildContext context, WidgetRef ref) async {
     // 로딩 다이얼로그 닫기
     if (context.mounted) {
       Navigator.of(context).pop();
-      
+
       // 성공 메시지와 함께 확인 다이얼로그 표시
       showDialog(
         context: context,
@@ -188,10 +185,9 @@ Future<void> _deleteAccount(BuildContext context, WidgetRef ref) async {
               onPressed: () {
                 Navigator.of(context).pop();
                 // 로그인 페이지로 이동
-                Navigator.of(context).pushNamedAndRemoveUntil(
-                  '/login', 
-                  (route) => false,
-                );
+                Navigator.of(
+                  context,
+                ).pushNamedAndRemoveUntil('/login', (route) => false);
               },
               child: const Text('확인'),
             ),
@@ -201,11 +197,11 @@ Future<void> _deleteAccount(BuildContext context, WidgetRef ref) async {
     }
   } catch (e) {
     print('계정 삭제 중 전체 오류: $e');
-    
+
     // 로딩 다이얼로그 닫기
     if (context.mounted) {
       Navigator.of(context).pop();
-      
+
       // 에러 메시지 표시
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -234,7 +230,10 @@ class MyPage extends ConsumerWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        title: const Text('마이페이지', style: TextStyle(color: darkGray, fontWeight: FontWeight.bold)),
+        title: const Text(
+          '마이페이지',
+          style: TextStyle(color: darkGray, fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: false,
@@ -252,8 +251,13 @@ class MyPage extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                user?.email ?? (user?.isAnonymous == true ? '익명 사용자' : '사용자 정보 없음'),
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: darkGray),
+                user?.email ??
+                    (user?.isAnonymous == true ? '익명 사용자' : '사용자 정보 없음'),
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: darkGray,
+                ),
               ),
               const SizedBox(height: 4),
               Text(
@@ -263,7 +267,7 @@ class MyPage extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 40),
-          
+
           // Conditionally show the "Add Recipe" button for admins
           userProfileAsync.when(
             data: (profile) {
@@ -273,15 +277,31 @@ class MyPage extends ConsumerWidget {
                     Card(
                       elevation: 0,
                       color: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                        leading: const Icon(Icons.post_add, color: primaryGreen),
-                        title: const Text('레시피 추가하기', style: TextStyle(fontWeight: FontWeight.w600, color: darkGray)),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 8,
+                        ),
+                        leading: const Icon(
+                          Icons.post_add,
+                          color: primaryGreen,
+                        ),
+                        title: const Text(
+                          '레시피 추가하기',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: darkGray,
+                          ),
+                        ),
                         onTap: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => const AddRecipePage()),
+                            MaterialPageRoute(
+                              builder: (context) => const AddRecipePage(),
+                            ),
                           );
                         },
                       ),
@@ -303,28 +323,53 @@ class MyPage extends ConsumerWidget {
           Card(
             elevation: 0,
             color: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 8,
+              ),
               leading: const Icon(Icons.logout, color: Color(0xFFE57373)),
-              title: const Text('로그아웃', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFFE57373))),
+              title: const Text(
+                '로그아웃',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFFE57373),
+                ),
+              ),
               onTap: () async {
                 await ref.read(supabaseProvider).auth.signOut();
               },
             ),
           ),
-          
+
           // 계정 삭제 Card 추가
           const SizedBox(height: 16),
           Card(
             elevation: 0,
             color: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 8,
+              ),
               leading: const Icon(Icons.delete_forever, color: Colors.red),
-              title: const Text('계정 삭제', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.red)),
-              subtitle: const Text('계정과 모든 데이터가 영구적으로 삭제됩니다', style: TextStyle(fontSize: 12, color: mediumGray)),
+              title: const Text(
+                '계정 삭제',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.red,
+                ),
+              ),
+              subtitle: const Text(
+                '계정과 모든 데이터가 영구적으로 삭제됩니다',
+                style: TextStyle(fontSize: 12, color: mediumGray),
+              ),
               onTap: () => _showDeleteAccountDialog(context, ref),
             ),
           ),
@@ -364,11 +409,11 @@ class MyPage extends ConsumerWidget {
   Future<void> _deleteAccount(BuildContext context, WidgetRef ref) async {
     final supabase = ref.read(supabaseProvider);
     final currentUser = supabase.auth.currentUser;
-    
+
     if (currentUser == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('로그인된 사용자가 없습니다.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('로그인된 사용자가 없습니다.')));
       return;
     }
 
@@ -412,7 +457,7 @@ class MyPage extends ConsumerWidget {
       print('서버 함수를 통한 계정 삭제 시도 중...');
       print('현재 사용자 ID: ${currentUser.id}');
       print('사용자 이메일: ${currentUser.email}');
-      
+
       try {
         print('RPC 함수 "delete_my_account" 호출 시작...');
         final response = await supabase.rpc('delete_my_account');
@@ -426,9 +471,12 @@ class MyPage extends ConsumerWidget {
       print('=== Auth 사용자 완전 삭제 시도 ===');
       print('사용자 ID: ${currentUser.id}');
       print('사용자 이메일: ${currentUser.email}');
-      
+
       try {
-        await supabase.rpc('delete_auth_user', params: {'user_id': currentUser.id});
+        await supabase.rpc(
+          'delete_auth_user',
+          params: {'user_id': currentUser.id},
+        );
         print('Auth 사용자 삭제 성공');
       } catch (e) {
         print('!  서버 함수 오류: $e');
@@ -443,44 +491,48 @@ class MyPage extends ConsumerWidget {
 
       // 완전한 세션 정리
       print('=== 완전한 세션 정리 시작 ===');
-      
+
       try {
         print('글로벌 로그아웃 시도 중...');
         await supabase.auth.signOut(scope: SignOutScope.global);
         print('1. Supabase 글로벌 로그아웃 완료');
-        
+
         // SharedPreferences 정리 (계정 삭제 플래그 포함)
         final allKeys = prefs.getKeys();
         print('정리 전 SharedPreferences 키들: $allKeys');
-        
+
         await prefs.clear();
         print('2. SharedPreferences 정리 완료 (계정 삭제 플래그 포함)');
-        
+
         // 상태 정리 대기
         await Future.delayed(const Duration(seconds: 1));
         print('3. 정리 후 사용자: ${supabase.auth.currentUser}');
-        print('4. 정리 후 세션: ${supabase.auth.currentSession != null ? '있음' : '없음'}');
-        
+        print(
+          '4. 정리 후 세션: ${supabase.auth.currentSession != null ? '있음' : '없음'}',
+        );
+
         final finalKeys = prefs.getKeys();
         print('5. 정리 후 SharedPreferences 키들: $finalKeys');
-        
+
         // OAuth 캐시 및 내부 저장소 정리
         print('=== OAuth 캐시 및 내부 저장소 정리 시작 ===');
         await supabase.auth.signOut(scope: SignOutScope.local);
-        
+
         // OAuth 캐시 정리 마크
         await prefs.setBool('oauth_cache_cleared', true);
-        await prefs.setInt('cache_clear_timestamp', DateTime.now().millisecondsSinceEpoch);
+        await prefs.setInt(
+          'cache_clear_timestamp',
+          DateTime.now().millisecondsSinceEpoch,
+        );
         print('OAuth 캐시 정리 마크 설정 완료');
-        
+
         print('최종 사용자: ${supabase.auth.currentUser}');
         print('최종 세션: ${supabase.auth.currentSession != null ? '있음' : '없음'}');
         print('=== 완전한 세션 정리 성공 ===');
-        
       } catch (signOutError) {
         print('로그아웃 중 오류: $signOutError');
       }
-      
+
       print('=== 완전한 세션 정리 완료 ===');
 
       // 성공 메시지 및 안전한 로그인 페이지 이동
@@ -495,10 +547,10 @@ class MyPage extends ConsumerWidget {
               duration: Duration(seconds: 1),
             ),
           );
-          
+
           // 잠시 대기 후 로그인 페이지로 이동
           await Future.delayed(const Duration(milliseconds: 500));
-          
+
           if (context.mounted) {
             Navigator.of(context).pushAndRemoveUntil(
               MaterialPageRoute(builder: (context) => const LoginPage()),
@@ -512,10 +564,9 @@ class MyPage extends ConsumerWidget {
       }
 
       print('계정 삭제 함수 완료');
-
     } catch (e) {
       print('계정 삭제 중 오류: $e');
-      
+
       // 에러 메시지 표시 (로딩 다이얼로그는 이미 닫혔음)
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -551,7 +602,11 @@ class LikedRecipesSection extends ConsumerWidget {
                 SizedBox(width: 8),
                 Text(
                   '좋아요 누른 레시피',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: darkGray),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: darkGray,
+                  ),
                 ),
               ],
             ),
@@ -562,7 +617,10 @@ class LikedRecipesSection extends ConsumerWidget {
                 return const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 20, vertical: 24),
                   child: Center(
-                    child: Text('아직 좋아요를 누른 레시피가 없습니다.', style: TextStyle(color: mediumGray)),
+                    child: Text(
+                      '아직 좋아요를 누른 레시피가 없습니다.',
+                      style: TextStyle(color: mediumGray),
+                    ),
                   ),
                 );
               }
@@ -573,14 +631,25 @@ class LikedRecipesSection extends ConsumerWidget {
                 itemBuilder: (context, index) {
                   final recipe = recipes[index];
                   return ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-                    title: Text(recipe.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: mediumGray),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 4,
+                    ),
+                    title: Text(
+                      recipe.name,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    trailing: const Icon(
+                      Icons.arrow_forward_ios,
+                      size: 16,
+                      color: mediumGray,
+                    ),
                     onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => RecipeDetailPage(recipe: recipe),
+                          builder: (context) =>
+                              RecipeDetailPage(recipe: recipe),
                         ),
                       );
                     },
