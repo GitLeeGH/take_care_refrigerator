@@ -225,47 +225,6 @@ class NotificationsPage extends ConsumerWidget {
               },
             ),
           ),
-          const SizedBox(height: 20),
-          // 테스트 알림 버튼 추가
-          Card(
-            elevation: 0,
-            color: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 10,
-              ),
-              title: const Text(
-                '알림 테스트',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-              subtitle: const Text(
-                '알림이 정상적으로 작동하는지 테스트합니다.',
-                style: TextStyle(color: mediumGray),
-              ),
-              trailing: ElevatedButton(
-                onPressed: () async {
-                  final notificationService = await ref.read(
-                    notificationServiceProvider.future,
-                  );
-                  await notificationService.showTestNotification();
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('테스트 알림을 전송했습니다!')),
-                    );
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: accentColor,
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text('테스트'),
-              ),
-            ),
-          ),
           const SizedBox(height: 16),
           // 임박 재료 즉시 알림 버튼
           Card(
@@ -341,7 +300,7 @@ class NotificationsPage extends ConsumerWidget {
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16.0),
             child: Text(
-              '알림은 설정된 시간(오전 9시)에 전송됩니다. 테스트 알림으로 먼저 확인해보세요.',
+              '알림은 설정된 시간(오전 9시)에 전송됩니다.',
               style: TextStyle(
                 color: mediumGray,
                 fontStyle: FontStyle.italic,
