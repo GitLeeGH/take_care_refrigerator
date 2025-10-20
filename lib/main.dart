@@ -33,6 +33,9 @@ Future<void> main() async {
   await Supabase.initialize(
     url: dotenv.env['SUPABASE_URL']!,
     anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
+    authOptions: const FlutterAuthClientOptions(
+      authFlowType: AuthFlowType.pkce,
+    ),
   );
 
   runApp(ProviderScope(child: MyApp(hasSeenOnboarding: hasSeenOnboarding)));
@@ -62,11 +65,47 @@ class AuthChecker extends ConsumerStatefulWidget {
 
 class _AuthCheckerState extends ConsumerState<AuthChecker> {
   late AppLinks _appLinks;
+  bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    _initDeepLinks();
+    _initializeApp();
+  }
+
+  Future<void> _initializeApp() async {
+    await _initDeepLinks();
+    await _recoverSession();
+    setState(() {
+      _isInitialized = true;
+    });
+  }
+
+  Future<void> _recoverSession() async {
+    try {
+      final supabase = ref.read(supabaseProvider);
+      print('🔄 앱 시작 시 세션 복구 시도');
+      
+      // 세션 새로고침 시도
+      final session = supabase.auth.currentSession;
+      if (session != null) {
+        print('✅ 기존 세션 발견: ${session.user.email}');
+        print('세션 만료 시간: ${DateTime.fromMillisecondsSinceEpoch(session.expiresAt! * 1000)}');
+        
+        // 만료되지 않은 경우만 세션 유지
+        final now = DateTime.now().millisecondsSinceEpoch / 1000;
+        if (session.expiresAt! > now) {
+          print('✅ 세션이 유효함 - 자동 로그인 유지');
+        } else {
+          print('⚠️ 세션이 만료됨 - 새로고침 시도');
+          await supabase.auth.refreshSession();
+        }
+      } else {
+        print('❌ 기존 세션 없음');
+      }
+    } catch (e) {
+      print('⚠️ 세션 복구 실패: $e');
+    }
   }
 
   Future<void> _initDeepLinks() async {
@@ -264,6 +303,22 @@ class _AuthCheckerState extends ConsumerState<AuthChecker> {
   @override
   Widget build(BuildContext context) {
     final supabase = ref.watch(supabaseProvider);
+
+    // 앱 초기화가 완료되지 않은 경우 로딩 표시
+    if (!_isInitialized) {
+      return const Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('앱을 시작하는 중...'),
+            ],
+          ),
+        ),
+      );
+    }
 
     return StreamBuilder<AuthState>(
       stream: supabase.auth.onAuthStateChange,
