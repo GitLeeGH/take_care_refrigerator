@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:app_links/app_links.dart';
+import 'dart:io';
 
 import 'src/theme.dart';
 import 'src/providers.dart';
@@ -25,7 +26,16 @@ Future<void> main() async {
   KakaoSdk.init(nativeAppKey: '5f221c04f30c10b07c1f376aedf67b61');
   print('✅ Kakao SDK 초기화 완료');
 
-  // Temporary key hash code removed.
+  // Print Key Hash for Kakao (Android only)
+  try {
+    if (Platform.isAndroid) {
+      print('🔑 현재 앱의 키 해시를 확인합니다...');
+      // 실제 키 해시는 카카오 에러 메시지에서 확인할 수 있습니다.
+      print('📋 카카오 개발자 콘솔에서 다음 패키지명을 확인하세요: com.tcf.take_care_refrigerator');
+    }
+  } catch (e) {
+    print('키 해시 확인 중 오류: $e');
+  }
 
   final prefs = await SharedPreferences.getInstance();
   final hasSeenOnboarding = prefs.getBool('hasSeenOnboarding') ?? false;

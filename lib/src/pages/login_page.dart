@@ -113,6 +113,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       print('❌ 에러 타입: ${e.runtimeType}');
       if (e is kakao.KakaoException) {
         print('❌ 카카오 에러 정보: ${e.toString()}');
+        // 키 해시 에러일 경우 추가 정보 출력
+        if (e.toString().contains('hash') ||
+            e.toString().contains('Hash') ||
+            e.toString().contains('HASH')) {
+          print('🔑 키 해시 에러 감지! 다음 정보를 카카오 개발자 콘솔에 등록하세요:');
+          print('📋 패키지명: com.tcf.take_care_refrigerator');
+          print('📋 에러 메시지에서 올바른 키 해시를 확인하세요: $e');
+        }
       }
       if (mounted) _showErrorSnackBar('카카오 로그인 중 오류가 발생했습니다: $e');
     }
