@@ -59,6 +59,12 @@ android {
             isShrinkResources = false
         }
     }
+    
+    packaging {
+        jniLibs {
+            keepDebugSymbols.add("**/lib/**/*.so")
+        }
+    }
 }
 
 flutter {

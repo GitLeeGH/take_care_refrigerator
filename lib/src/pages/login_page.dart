@@ -63,27 +63,38 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Future<void> _signInWithKakao() async {
     setState(() => _isLoading = true);
     try {
+      print('🥳 카카오 로그인 시작');
+
       // 카카오톡 앱으로 로그인 시도, 실패하면 카카오계정으로 로그인
       if (await kakao.isKakaoTalkInstalled()) {
+        print('📱 카카오톡 앱이 설치되어 있음. 카카오톡으로 로그인 시도');
         await kakao.UserApi.instance.loginWithKakaoTalk();
       } else {
+        print('🌐 카카오톡 앱이 없음. 카카오계정으로 로그인 시도');
         await kakao.UserApi.instance.loginWithKakaoAccount();
       }
 
+      print('✅ 카카오 로그인 성공');
+
       // 카카오 사용자 정보 가져오기
       kakao.User kakaoUser = await kakao.UserApi.instance.me();
+      print('👤 카카오 사용자 정보 가져오기 성공');
 
       final String kakaoId = kakaoUser.id.toString();
       final String? email = kakaoUser.kakaoAccount?.email;
       final String? nickname = kakaoUser.kakaoAccount?.profile?.nickname;
 
+      print('📋 카카오 사용자 정보: ID=$kakaoId, email=$email, nickname=$nickname');
+
       // 간단한 익명 로그인 방식으로 처리 (더 안정적)
       final supabase = ref.read(supabaseProvider);
 
+      print('🔐 Supabase 익명 로그인 시도');
       // 익명 로그인 후 사용자 데이터에 카카오 정보 저장
       final response = await supabase.auth.signInAnonymously();
 
       if (response.user != null) {
+        print('🎯 Supabase 로그인 성공, 사용자 정보 업데이트 중');
         await supabase.auth.updateUser(
           UserAttributes(
             data: {
@@ -95,9 +106,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             },
           ),
         );
+        print('✨ 사용자 정보 업데이트 완료');
       }
     } catch (e) {
-      if (mounted) _showErrorSnackBar('로그인 중 오류가 발생했습니다.');
+      print('❌ 카카오 로그인 에러: $e');
+      print('❌ 에러 타입: ${e.runtimeType}');
+      if (e is kakao.KakaoException) {
+        print('❌ 카카오 에러 정보: ${e.toString()}');
+      }
+      if (mounted) _showErrorSnackBar('카카오 로그인 중 오류가 발생했습니다: $e');
     }
     if (mounted) {
       setState(() => _isLoading = false);

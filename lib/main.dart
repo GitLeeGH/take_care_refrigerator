@@ -21,7 +21,9 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize Kakao SDK
+  print('🥳 Kakao SDK 초기화 시작');
   KakaoSdk.init(nativeAppKey: '5f221c04f30c10b07c1f376aedf67b61');
+  print('✅ Kakao SDK 초기화 완료');
 
   // Temporary key hash code removed.
 
@@ -85,13 +87,15 @@ class _AuthCheckerState extends ConsumerState<AuthChecker> {
     try {
       final supabase = ref.read(supabaseProvider);
       print('🔄 앱 시작 시 세션 복구 시도');
-      
+
       // 세션 새로고침 시도
       final session = supabase.auth.currentSession;
       if (session != null) {
         print('✅ 기존 세션 발견: ${session.user.email}');
-        print('세션 만료 시간: ${DateTime.fromMillisecondsSinceEpoch(session.expiresAt! * 1000)}');
-        
+        print(
+          '세션 만료 시간: ${DateTime.fromMillisecondsSinceEpoch(session.expiresAt! * 1000)}',
+        );
+
         // 만료되지 않은 경우만 세션 유지
         final now = DateTime.now().millisecondsSinceEpoch / 1000;
         if (session.expiresAt! > now) {
