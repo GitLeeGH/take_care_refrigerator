@@ -340,6 +340,20 @@ class MyPage extends ConsumerWidget {
                 ),
               ),
               onTap: () async {
+                // 모든 provider 상태 초기화
+                ref.invalidate(ingredientsProvider);
+                ref.invalidate(searchQueryProvider);
+                ref.invalidate(recipeSortProvider);
+                ref.invalidate(canMakeFilterProvider);
+                ref.invalidate(recommendedIdsProvider);
+                ref.invalidate(popularIdsProvider);
+                ref.invalidate(recentIdsProvider);
+                ref.invalidate(paginatedRecipesProvider);
+                ref.invalidate(userProfileProvider);
+                ref.invalidate(notificationListProvider);
+                ref.invalidate(notificationSettingsProvider);
+
+                // Supabase 로그아웃
                 await ref.read(supabaseProvider).auth.signOut();
               },
             ),

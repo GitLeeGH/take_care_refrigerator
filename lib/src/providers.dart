@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -50,8 +52,11 @@ class NotificationItem {
 enum NotificationPriority { urgent, warning, info }
 
 // 알림 목록 상태 관리
-class NotificationListNotifier extends StateNotifier<List<NotificationItem>> {
-  NotificationListNotifier() : super([]);
+class NotificationListNotifier extends Notifier<List<NotificationItem>> {
+  @override
+  List<NotificationItem> build() {
+    return [];
+  }
 
   void addNotification(NotificationItem notification) {
     state = [notification, ...state];
@@ -178,13 +183,38 @@ final ingredientsProvider = StreamProvider.autoDispose<List<Ingredient>>((ref) {
 // --- UI State Providers ---
 enum RecipeSortType { recommended, popular, recent }
 
-final searchQueryProvider = StateProvider<String>((ref) => '');
-final recipeSortProvider = StateProvider<RecipeSortType>(
-  (ref) => RecipeSortType.recommended,
+class SearchQueryNotifier extends Notifier<String> {
+  @override
+  String build() => '';
+
+  void update(String query) => state = query;
+}
+
+class RecipeSortNotifier extends Notifier<RecipeSortType> {
+  @override
+  RecipeSortType build() => RecipeSortType.recommended;
+
+  void update(RecipeSortType sort) => state = sort;
+}
+
+class CanMakeFilterNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void update(bool canMake) => state = canMake;
+}
+
+final searchQueryProvider = NotifierProvider<SearchQueryNotifier, String>(
+  SearchQueryNotifier.new,
+);
+final recipeSortProvider = NotifierProvider<RecipeSortNotifier, RecipeSortType>(
+  RecipeSortNotifier.new,
 );
 
 // Provider for the 'can make only' filter
-final canMakeFilterProvider = StateProvider<bool>((ref) => false);
+final canMakeFilterProvider = NotifierProvider<CanMakeFilterNotifier, bool>(
+  CanMakeFilterNotifier.new,
+);
 
 // --- Data Fetching Providers for Recipe IDs ---
 
@@ -274,13 +304,23 @@ class PaginatedRecipesState {
 }
 
 // The Notifier
-class PaginatedRecipesNotifier extends StateNotifier<PaginatedRecipesState> {
-  PaginatedRecipesNotifier(this.ref) : super(const PaginatedRecipesState());
-
-  final Ref ref;
+class PaginatedRecipesNotifier extends Notifier<PaginatedRecipesState> {
   List<String> _sortedRecipeIds = [];
   int _page = 0;
   static const _pageSize = 10;
+
+  @override
+  PaginatedRecipesState build() {
+    // 재료, 정렬 방식, 검색어, 필터가 변경되면 자동으로 재초기화
+    ref.watch(ingredientsProvider);
+    ref.watch(recipeSortProvider);
+    ref.watch(searchQueryProvider);
+    ref.watch(canMakeFilterProvider);
+
+    // 초기화 시 init 호출
+    WidgetsBinding.instance.addPostFrameCallback((_) => init());
+    return const PaginatedRecipesState();
+  }
 
   Future<void> init() async {
     state = const PaginatedRecipesState(isLoading: true);
@@ -381,37 +421,12 @@ class PaginatedRecipesNotifier extends StateNotifier<PaginatedRecipesState> {
   }
 }
 
-// The StateNotifierProvider
+// The NotifierProvider
 final paginatedRecipesProvider =
-    StateNotifierProvider.autoDispose<
+    NotifierProvider.autoDispose<
       PaginatedRecipesNotifier,
       PaginatedRecipesState
-    >((ref) {
-      final notifier = PaginatedRecipesNotifier(ref);
-
-      // Call init when the provider is first created.
-      notifier.init();
-
-      // When sort type or search query changes, re-initialize the notifier.
-      ref.listen(recipeSortProvider, (_, __) => notifier.init());
-      ref.listen(searchQueryProvider, (_, __) {
-        // We debounce this slightly to avoid re-initializing on every keystroke.
-        final timer = Timer(const Duration(milliseconds: 500), () {
-          notifier.init();
-        });
-        ref.onDispose(() => timer.cancel());
-      });
-
-      // Also, when the recommended IDs change (e.g. after ingredients load),
-      // re-init if we are currently sorted by recommended.
-      ref.listen(recommendedIdsProvider, (_, __) {
-        if (ref.read(recipeSortProvider) == RecipeSortType.recommended) {
-          notifier.init();
-        }
-      });
-
-      return notifier;
-    });
+    >(PaginatedRecipesNotifier.new);
 
 // Provider to fetch shelf life data from Supabase
 final shelfLifeDataProvider = FutureProvider.autoDispose<Map<String, int>>((
@@ -580,8 +595,11 @@ final likeRecipeProvider = Provider.autoDispose((ref) {
         'recipe_id': recipeId,
       });
     }
-    ref.invalidate(likedRecipeIdsProvider); // Force the liked IDs to refetch
-    ref.invalidate(popularIdsProvider); // Invalidate to refetch sorted IDs
+    // 좋아요 변경 후 모든 관련 provider 무효화
+    ref.invalidate(likedRecipeIdsProvider); // 좋아요한 레시피 ID 목록 갱신
+    ref.invalidate(likedRecipesProvider); // 좋아요한 레시피 상세 정보 갱신
+    ref.invalidate(popularIdsProvider); // 인기순 레시피 재조회
+    ref.invalidate(paginatedRecipesProvider); // 페이지네이션 레시피 재조회
   }
 
   return toggleLike;
@@ -684,9 +702,11 @@ final notificationSchedulerProvider = Provider.autoDispose((ref) {
   }
 });
 
-class NotificationSettingsNotifier extends StateNotifier<NotificationSettings> {
-  NotificationSettingsNotifier()
-    : super(NotificationSettings(notificationsEnabled: true, daysBefore: 3));
+class NotificationSettingsNotifier extends Notifier<NotificationSettings> {
+  @override
+  NotificationSettings build() {
+    return NotificationSettings(notificationsEnabled: true, daysBefore: 3);
+  }
 
   void toggleNotifications(bool enabled) =>
       state = state.copyWith(notificationsEnabled: enabled);
@@ -694,26 +714,11 @@ class NotificationSettingsNotifier extends StateNotifier<NotificationSettings> {
 }
 
 final notificationSettingsProvider =
-    StateNotifierProvider<NotificationSettingsNotifier, NotificationSettings>((
-      ref,
-    ) {
-      return NotificationSettingsNotifier();
-    });
+    NotifierProvider<NotificationSettingsNotifier, NotificationSettings>(
+      NotificationSettingsNotifier.new,
+    );
 
 final notificationListProvider =
-    StateNotifierProvider<NotificationListNotifier, List<NotificationItem>>((
-      ref,
-    ) {
-      final notifier = NotificationListNotifier();
-
-      // 재료 목록이 변경될 때마다 알림 업데이트
-      ref.listen(ingredientsProvider, (_, ingredientsAsync) {
-        if (ingredientsAsync.hasValue) {
-          notifier.generateNotificationsFromIngredients(
-            ingredientsAsync.value!,
-          );
-        }
-      });
-
-      return notifier;
-    });
+    NotifierProvider<NotificationListNotifier, List<NotificationItem>>(
+      NotificationListNotifier.new,
+    );

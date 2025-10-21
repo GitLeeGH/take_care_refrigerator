@@ -374,7 +374,16 @@ class _AuthCheckerState extends ConsumerState<AuthChecker> {
 }
 
 // Provider to control the page index of the bottom navigation bar
-final pageIndexProvider = StateProvider<int>((ref) => 0);
+class PageIndexNotifier extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void update(int index) => state = index;
+}
+
+final pageIndexProvider = NotifierProvider<PageIndexNotifier, int>(
+  PageIndexNotifier.new,
+);
 
 class AppShell extends ConsumerWidget {
   const AppShell({super.key});
@@ -397,7 +406,7 @@ class AppShell extends ConsumerWidget {
       body: IndexedStack(index: pageIndex, children: _pages),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: pageIndex,
-        onTap: (index) => ref.read(pageIndexProvider.notifier).state = index,
+        onTap: (index) => ref.read(pageIndexProvider.notifier).update(index),
         type: BottomNavigationBarType.fixed,
         selectedItemColor: primaryBlue,
         unselectedItemColor: mediumGray,
