@@ -648,12 +648,30 @@ final notificationSchedulerProvider = Provider.autoDispose((ref) {
 
       print('  현재 시간: ${now.toString()}');
       print('  확인할 재료 개수: ${ingredients.length}');
+      
+      // 신규 재료 감지 (오늘 등록된 재료)
+      final newIngredientsToday = ingredients.where((ing) {
+        final createdToday = ing.createdAt.year == now.year && 
+                           ing.createdAt.month == now.month && 
+                           ing.createdAt.day == now.day;
+        return createdToday;
+      }).toList();
+      
+      if (newIngredientsToday.isNotEmpty) {
+        print('  🆕 신규 등록 재료: ${newIngredientsToday.length}개');
+        for (final ing in newIngredientsToday) {
+          print('     └─ ${ing.name} (${ing.expiryDate.toString()})');
+        }
+      }
 
       for (final ingredient in ingredients) {
         final expiryDate = ingredient.expiryDate;
         final daysUntilExpiry = expiryDate.difference(now).inDays;
+        
+        final isNewIngredient = newIngredientsToday.contains(ingredient);
+        final newMarker = isNewIngredient ? '🆕 ' : '';
 
-        print('  └─ ${ingredient.name}: 유통기한=${expiryDate.toString()}, D-$daysUntilExpiry');
+        print('  └─ $newMarker${ingredient.name}: 유통기한=${expiryDate.toString()}, D-$daysUntilExpiry');
 
         // 유통기한이 이미 지났거나 오늘인 경우 즉시 알림
         if (daysUntilExpiry <= 0) {
