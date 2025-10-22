@@ -1,15 +1,38 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class NotificationService {
+  static final NotificationService _instance = NotificationService._internal();
+  
+  static const String _notificationPermissionKey = 'notification_permissions_requested';
+  static const String _exactAlarmPermissionKey = 'exact_alarm_permission_requested';
+  static const String _initCompleteKey = 'notification_service_init_complete';
+
+  bool _initialized = false;
+
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
 
+  NotificationService._internal();
+
+  factory NotificationService() {
+    return _instance;
+  }
+
+  bool get isInitialized => _initialized;
+
   Future<void> init() async {
+    // 이미 초기화되었으면 스킵
+    if (_initialized) {
+      print('✅ NotificationService는 이미 초기화됨 (스킵)');
+      return;
+    }
+
     print('📱 NotificationService 초기화 시작...');
     try {
-      // Timezone 초기화
+      // Timezone 초기화 (한 번만 필요하지만, 여러 번 호출해도 안전)
       tz.initializeTimeZones();
       tz.setLocalLocation(tz.getLocation('Asia/Seoul'));
       print('✅ Timezone 초기화 완료 - Asia/Seoul');
@@ -35,6 +58,20 @@ class NotificationService {
       await flutterLocalNotificationsPlugin.initialize(initializationSettings);
       print('✅ FlutterLocalNotificationsPlugin 초기화 완료');
 
+      // 권한 요청 (한 번만)
+      await _requestPermissionsOnce();
+      
+      _initialized = true;
+      print('📱 NotificationService 초기화 완료!');
+    } catch (e) {
+      print('❌ NotificationService 초기화 실패: $e');
+    }
+  }
+
+  Future<void> _requestPermissionsOnce() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
       // Android 알림 권한 요청
       final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
           flutterLocalNotificationsPlugin
@@ -43,21 +80,30 @@ class NotificationService {
               >();
 
       if (androidImplementation != null) {
-        // 정확한 알람 권한 요청 (Android 12+에서 필요)
-        print('🔐 Android 권한 요청 중...');
-        await androidImplementation.requestExactAlarmsPermission();
-        print('✅ SCHEDULE_EXACT_ALARM 권한 요청 완료');
+        // 정확한 알람 권한 요청 (Android 12+에서 필요, 한 번만)
+        if (!prefs.containsKey(_exactAlarmPermissionKey)) {
+          print('🔐 SCHEDULE_EXACT_ALARM 권한 요청 중...');
+          await androidImplementation.requestExactAlarmsPermission();
+          await prefs.setBool(_exactAlarmPermissionKey, true);
+          print('✅ SCHEDULE_EXACT_ALARM 권한 요청 완료 (저장됨)');
+        } else {
+          print('✅ SCHEDULE_EXACT_ALARM 권한 이미 요청됨 (스킵)');
+        }
 
-        // 알림 권한 요청
-        await androidImplementation.requestNotificationsPermission();
-        print('✅ POST_NOTIFICATIONS 권한 요청 완료');
+        // 알림 권한 요청 (한 번만)
+        if (!prefs.containsKey(_notificationPermissionKey)) {
+          print('🔐 POST_NOTIFICATIONS 권한 요청 중...');
+          await androidImplementation.requestNotificationsPermission();
+          await prefs.setBool(_notificationPermissionKey, true);
+          print('✅ POST_NOTIFICATIONS 권한 요청 완료 (저장됨)');
+        } else {
+          print('✅ POST_NOTIFICATIONS 권한 이미 요청됨 (스킵)');
+        }
       } else {
         print('⚠️ Android 구현을 찾을 수 없습니다');
       }
-      
-      print('📱 NotificationService 초기화 완료!');
     } catch (e) {
-      print('❌ NotificationService 초기화 실패: $e');
+      print('⚠️ 권한 요청 중 오류: $e');
     }
   }
 

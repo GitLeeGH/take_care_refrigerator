@@ -605,12 +605,14 @@ final likeRecipeProvider = Provider.autoDispose((ref) {
   return toggleLike;
 });
 
-// Provider that creates and initializes the NotificationService
+// Provider that creates and initializes the NotificationService (Singleton)
 final notificationServiceProvider = FutureProvider<NotificationService>((
   ref,
 ) async {
   final service = NotificationService();
-  await service.init();
+  if (!service.isInitialized) {
+    await service.init();
+  }
   return service;
 });
 
