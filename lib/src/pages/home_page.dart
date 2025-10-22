@@ -56,8 +56,12 @@ class _HomePageState extends ConsumerState<HomePage>
               onPressed: () {
                 final storageTypes = ['refrigerated', 'frozen', 'ambient'];
                 final currentStorageType = storageTypes[_tabController.index];
-                _showAddEditIngredientSheet(context, ref, null,
-                    storageType: currentStorageType);
+                _showAddEditIngredientSheet(
+                  context,
+                  ref,
+                  null,
+                  storageType: currentStorageType,
+                );
               },
             ),
           ),
@@ -81,17 +85,24 @@ class _HomePageState extends ConsumerState<HomePage>
           Expanded(
             child: ingredientsAsync.when(
               data: (ingredients) {
-                final refrigeratedItems =
-                    ingredients.where((i) => i.storageType == 'refrigerated').toList();
-                final frozenItems =
-                    ingredients.where((i) => i.storageType == 'frozen').toList();
-                final ambientItems =
-                    ingredients.where((i) => i.storageType == 'ambient').toList();
+                final refrigeratedItems = ingredients
+                    .where((i) => i.storageType == 'refrigerated')
+                    .toList();
+                final frozenItems = ingredients
+                    .where((i) => i.storageType == 'frozen')
+                    .toList();
+                final ambientItems = ingredients
+                    .where((i) => i.storageType == 'ambient')
+                    .toList();
 
                 return TabBarView(
                   controller: _tabController,
                   children: [
-                    _buildIngredientList(refrigeratedItems, ref, 'refrigerated'),
+                    _buildIngredientList(
+                      refrigeratedItems,
+                      ref,
+                      'refrigerated',
+                    ),
                     _buildIngredientList(frozenItems, ref, 'frozen'),
                     _buildIngredientList(ambientItems, ref, 'ambient'),
                   ],
@@ -107,11 +118,18 @@ class _HomePageState extends ConsumerState<HomePage>
   }
 
   Widget _buildIngredientList(
-      List<Ingredient> items, WidgetRef ref, String storageType) {
+    List<Ingredient> items,
+    WidgetRef ref,
+    String storageType,
+  ) {
     return GroupedIngredientList(
       items: items,
-      onAdd: () =>
-          _showAddEditIngredientSheet(context, ref, null, storageType: storageType),
+      onAdd: () => _showAddEditIngredientSheet(
+        context,
+        ref,
+        null,
+        storageType: storageType,
+      ),
     );
   }
 }
@@ -143,12 +161,15 @@ class GroupedIngredientList extends StatelessWidget {
         .where((i) => i.expiryDate.difference(now).inDays < 3)
         .toList();
     final warningItems = items
-        .where((i) =>
-            i.expiryDate.difference(now).inDays >= 3 &&
-            i.expiryDate.difference(now).inDays < 7)
+        .where(
+          (i) =>
+              i.expiryDate.difference(now).inDays >= 3 &&
+              i.expiryDate.difference(now).inDays < 7,
+        )
         .toList();
-    final safeItems =
-        items.where((i) => i.expiryDate.difference(now).inDays >= 7).toList();
+    final safeItems = items
+        .where((i) => i.expiryDate.difference(now).inDays >= 7)
+        .toList();
 
     return CustomScrollView(
       slivers: [
@@ -156,7 +177,8 @@ class GroupedIngredientList extends StatelessWidget {
           const _GroupHeader(title: '🚨 유통기한 임박'),
           SliverList(
             delegate: SliverChildBuilderDelegate(
-              (context, index) => IngredientTile(ingredient: urgentItems[index]),
+              (context, index) =>
+                  IngredientTile(ingredient: urgentItems[index]),
               childCount: urgentItems.length,
             ),
           ),
@@ -232,7 +254,11 @@ class ExpiringRecipesSection extends ConsumerWidget {
                 SizedBox(width: 8),
                 Text(
                   '유통기한 임박 재료 활용 레시피 💡',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: darkGray),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: darkGray,
+                  ),
                 ),
               ],
             ),
@@ -253,39 +279,58 @@ class ExpiringRecipesSection extends ConsumerWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => RecipeDetailPage(recipe: recipe),
+                          builder: (context) =>
+                              RecipeDetailPage(recipe: recipe),
                         ),
                       );
                     },
                     child: Card(
                       clipBehavior: Clip.antiAlias,
                       elevation: 0.5,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       margin: const EdgeInsets.symmetric(horizontal: 4),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(
-                            child: (recipe.imageUrl != null && recipe.imageUrl!.isNotEmpty)
+                            child:
+                                (recipe.imageUrl != null &&
+                                    recipe.imageUrl!.isNotEmpty)
                                 ? CachedNetworkImage(
                                     imageUrl: recipe.imageUrl!,
                                     width: double.infinity,
                                     fit: BoxFit.cover,
-                                    placeholder: (context, url) => Shimmer.fromColors(
-                                      baseColor: Colors.grey[300]!,
-                                      highlightColor: Colors.grey[100]!,
-                                      child: Container(color: Colors.white),
-                                    ),
+                                    placeholder: (context, url) =>
+                                        Shimmer.fromColors(
+                                          baseColor: Colors.grey[300]!,
+                                          highlightColor: Colors.grey[100]!,
+                                          child: Container(color: Colors.white),
+                                        ),
                                     errorWidget: (context, url, error) =>
-                                        const Center(child: Icon(Icons.ramen_dining_outlined, color: mediumGray)),
+                                        const Center(
+                                          child: Icon(
+                                            Icons.ramen_dining_outlined,
+                                            color: mediumGray,
+                                          ),
+                                        ),
                                   )
-                                : const Center(child: Icon(Icons.ramen_dining_outlined, color: mediumGray)),
+                                : const Center(
+                                    child: Icon(
+                                      Icons.ramen_dining_outlined,
+                                      color: mediumGray,
+                                    ),
+                                  ),
                           ),
                           Padding(
                             padding: const EdgeInsets.all(8.0),
                             child: Text(
                               recipe.name,
-                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -313,8 +358,11 @@ class IngredientTile extends ConsumerWidget {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final expiryDay = DateTime(
-        ingredient.expiryDate.year, ingredient.expiryDate.month, ingredient.expiryDate.day);
-    
+      ingredient.expiryDate.year,
+      ingredient.expiryDate.month,
+      ingredient.expiryDate.day,
+    );
+
     final daysLeft = expiryDay.difference(today).inDays;
 
     final totalDuration = expiryDay.difference(ingredient.createdAt).inDays;
@@ -326,7 +374,7 @@ class IngredientTile extends ConsumerWidget {
     final Color dDayColor;
 
     if (daysLeft > 0) {
-      dDayText = 'D-${daysLeft}';
+      dDayText = 'D-$daysLeft';
       dDayColor = mediumGray;
     } else if (daysLeft == 0) {
       dDayText = '오늘까지';
@@ -456,8 +504,11 @@ class _AddEditIngredientSheet extends ConsumerStatefulWidget {
   final WidgetRef ref; // Pass ref to the stateful widget
   final String? storageType;
 
-  const _AddEditIngredientSheet(
-      {this.ingredient, required this.ref, this.storageType});
+  const _AddEditIngredientSheet({
+    this.ingredient,
+    required this.ref,
+    this.storageType,
+  });
 
   @override
   ConsumerState<_AddEditIngredientSheet> createState() =>
@@ -481,7 +532,8 @@ class _AddEditIngredientSheetState
     quantityController = TextEditingController(text: ingredient?.quantity);
     selectedDate = ingredient?.expiryDate ?? DateTime.now();
     // Prioritize ingredient's storage type, then passed type, then default.
-    storageType = ingredient?.storageType ?? widget.storageType ?? 'refrigerated';
+    storageType =
+        ingredient?.storageType ?? widget.storageType ?? 'refrigerated';
   }
 
   @override
@@ -525,7 +577,9 @@ class _AddEditIngredientSheetState
               context: context,
               builder: (context) => AlertDialog(
                 title: const Text('새로운 재료 정보 저장'),
-                content: Text('\'$name\'의 추천 유통기한을 $days일로 저장할까요?\n다른 사용자들이 유용하게 사용할 수 있습니다.'),
+                content: Text(
+                  '\'$name\'의 추천 유통기한을 $days일로 저장할까요?\n다른 사용자들이 유용하게 사용할 수 있습니다.',
+                ),
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.of(context).pop(),
@@ -533,10 +587,10 @@ class _AddEditIngredientSheetState
                   ),
                   TextButton(
                     onPressed: () async {
-                      await ref.read(supabaseProvider).from('shelf_life_data').insert({
-                        'name': name,
-                        'days': days,
-                      });
+                      await ref
+                          .read(supabaseProvider)
+                          .from('shelf_life_data')
+                          .insert({'name': name, 'days': days});
                       ref.invalidate(shelfLifeDataProvider);
                       if (mounted) Navigator.of(context).pop();
                     },
@@ -601,7 +655,8 @@ class _AddEditIngredientSheetState
           const SizedBox(height: 16),
           TextField(
             controller: quantityController,
-            decoration: const InputDecoration(labelText: '수량 (예: 1개, 200g)')),
+            decoration: const InputDecoration(labelText: '수량 (예: 1개, 200g)'),
+          ),
           const SizedBox(height: 20),
           const Text(
             '보관 방식',
@@ -710,13 +765,21 @@ class EmptyStateWidget extends StatelessWidget {
             const SizedBox(height: 24),
             Text(
               title,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: darkGray),
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: darkGray,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
             Text(
               message,
-              style: const TextStyle(fontSize: 16, color: mediumGray, height: 1.5),
+              style: const TextStyle(
+                fontSize: 16,
+                color: mediumGray,
+                height: 1.5,
+              ),
               textAlign: TextAlign.center,
             ),
             if (onButtonPressed != null && buttonText != null)
@@ -725,13 +788,22 @@ class EmptyStateWidget extends StatelessWidget {
                 child: ElevatedButton.icon(
                   onPressed: onButtonPressed,
                   icon: const Icon(Icons.add, color: Colors.white),
-                  label: Text(buttonText!, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  label: Text(
+                    buttonText!,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryBlue,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
                   ),
                 ),
               ),

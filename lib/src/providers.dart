@@ -623,20 +623,35 @@ final notificationSchedulerProvider = Provider.autoDispose((ref) {
   final ingredientsAsync = ref.watch(ingredientsProvider);
   final settings = ref.watch(notificationSettingsProvider);
 
+  print('📲 알림 스케줄러 실행 중...');
+  print('  - NotificationService: ${notificationServiceAsync.hasValue ? '준비됨' : '대기중'}');
+  print('  - Ingredients: ${ingredientsAsync.hasValue ? '${ingredientsAsync.value?.length ?? 0}개' : '대기중'}');
+  print('  - Settings: 알림=${settings.notificationsEnabled ? '활성화' : '비활성화'}, D-${settings.daysBefore}');
+
   // Only schedule notifications if all dependencies are ready
   if (notificationServiceAsync.hasValue && ingredientsAsync.hasValue) {
     final notificationService = notificationServiceAsync.value!;
     final ingredients = ingredientsAsync.value!;
 
     if (settings.notificationsEnabled) {
+      print('🔔 알림 스케줄링 시작...');
       notificationService.cancelAllNotifications();
+      print('  ✓ 기존 알림 취소 완료');
 
       final now = DateTime.now();
       int scheduledCount = 0;
+      int expiredCount = 0;
+      int imminentCount = 0;
+      int futureCount = 0;
+
+      print('  현재 시간: ${now.toString()}');
+      print('  확인할 재료 개수: ${ingredients.length}');
 
       for (final ingredient in ingredients) {
         final expiryDate = ingredient.expiryDate;
         final daysUntilExpiry = expiryDate.difference(now).inDays;
+
+        print('  └─ ${ingredient.name}: 유통기한=${expiryDate.toString()}, D-$daysUntilExpiry');
 
         // 유통기한이 이미 지났거나 오늘인 경우 즉시 알림
         if (daysUntilExpiry <= 0) {
@@ -647,10 +662,9 @@ final notificationSchedulerProvider = Provider.autoDispose((ref) {
                 '${ingredient.name}의 유통기한이 ${daysUntilExpiry == 0 ? '오늘까지' : '${-daysUntilExpiry}일 지남'}입니다!',
             scheduledDate: now.add(const Duration(minutes: 1)), // 1분 후 즉시 알림
           );
+          expiredCount++;
           scheduledCount++;
-          print(
-            '즉시 알림 예약: ${ingredient.name} (유통기한 ${daysUntilExpiry == 0 ? '오늘' : '${-daysUntilExpiry}일 지남'})',
-          );
+          print('     ✓ 즉시 알림 예약 (유통기한 경과)');
         }
         // 설정된 일수 이내에 유통기한이 도래하는 경우
         else if (daysUntilExpiry <= settings.daysBefore) {
@@ -667,8 +681,9 @@ final notificationSchedulerProvider = Provider.autoDispose((ref) {
             body: '${ingredient.name}의 유통기한이 ${daysUntilExpiry}일 남았습니다!',
             scheduledDate: notificationDate,
           );
+          imminentCount++;
           scheduledCount++;
-          print('임박 알림 예약: ${ingredient.name} (D-$daysUntilExpiry) - 내일 오전 9시');
+          print('     ✓ 임박 알림 예약 (내일 9시)');
         }
         // 정상적인 미래 알림
         else {
@@ -689,16 +704,27 @@ final notificationSchedulerProvider = Provider.autoDispose((ref) {
               body: '${ingredient.name}의 유통기한이 ${settings.daysBefore}일 남았습니다!',
               scheduledDate: scheduledDateTime,
             );
+            futureCount++;
             scheduledCount++;
             print(
-              '정규 알림 예약: ${ingredient.name} - ${scheduledDateTime.toString()}',
+              '     ✓ 정규 알림 예약 (${scheduledDateTime.toString()})',
             );
           }
         }
       }
 
-      print('총 $scheduledCount개의 알림이 예약되었습니다.');
+      print('🔔 알림 스케줄링 완료!');
+      print('  - 즉시 알림: $expiredCount개');
+      print('  - 임박 알림: $imminentCount개');
+      print('  - 정규 알림: $futureCount개');
+      print('  - 총 예약: $scheduledCount개');
+    } else {
+      print('🔕 알림이 비활성화되어 있습니다.');
     }
+  } else {
+    print('⏳ 알림 스케줄러 대기 중...');
+    print('  - NotificationService: ${notificationServiceAsync.hasValue ? '준비됨' : '로딩중'}');
+    print('  - Ingredients: ${ingredientsAsync.hasValue ? '준비됨' : '로딩중'}');
   }
 });
 

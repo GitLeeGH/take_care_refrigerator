@@ -14,12 +14,19 @@ import 'src/pages/notifications_page.dart';
 import 'src/pages/my_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'src/pages/onboarding_page.dart';
-import 'package:take_care_refrigerator/src/pages/login_page.dart';
+import 'src/pages/login_page.dart';
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
+import 'src/services/notification_service.dart';
 
 Future<void> main() async {
-  print('🚨🚨🚨 MAIN 함수 시작 - NEW VERSION 2024.10.19 🚨🚨🚨');
+  print('🚨🚨🚨 MAIN 함수 시작 - NEW VERSION 2024.10.22 🚨🚨🚨');
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Notification Service
+  print('🔔 알림 서비스 초기화 시작');
+  final notificationService = NotificationService();
+  await notificationService.init();
+  print('✅ 알림 서비스 초기화 완료');
 
   // Initialize Kakao SDK
   print('🥳 Kakao SDK 초기화 시작');
