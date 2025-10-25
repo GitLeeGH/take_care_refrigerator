@@ -8,7 +8,6 @@ class NotificationService {
   
   static const String _notificationPermissionKey = 'notification_permissions_requested';
   static const String _exactAlarmPermissionKey = 'exact_alarm_permission_requested';
-  static const String _initCompleteKey = 'notification_service_init_complete';
 
   bool _initialized = false;
 
@@ -114,15 +113,14 @@ class NotificationService {
     required DateTime scheduledDate,
   }) async {
     try {
-      // 시간을 오전 9시로 설정
-      final scheduledDateTime = DateTime(
-        scheduledDate.year,
-        scheduledDate.month,
-        scheduledDate.day,
-        9, // 오전 9시
-      );
-
-      final tzScheduledDate = tz.TZDateTime.from(scheduledDateTime, tz.local);
+      // scheduledDate를 그대로 사용 (시간이 이미 설정되어 있음)
+      final tzScheduledDate = tz.TZDateTime.from(scheduledDate, tz.local);
+      
+      // 과거 시간으로 스케줄된 경우 스킵
+      if (tzScheduledDate.isBefore(tz.TZDateTime.now(tz.local))) {
+        print('⏭️ 알림 예약 스킵: 예약 시간이 과거입니다 ($tzScheduledDate)');
+        return;
+      }
       
       print('⏰ 알림 예약: ID=$id, 제목="$title", 예약시간="${tzScheduledDate.toString()}"');
 

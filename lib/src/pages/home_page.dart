@@ -603,15 +603,15 @@ class _AddEditIngredientSheetState
         }
         // --- End of Crowdsourcing Logic ---
       }
-      
+
       // 재료 provider 무효화 (즉시 반영)
       print('🔄 재료 정보 갱신 중...');
       ref.invalidate(ingredientsProvider);
-      
+
       // 즉시 알림 스케줄러 재실행 (신규 재료의 유통기한 확인)
       print('🔔 알림 스케줄러 즉시 재실행 중...');
       ref.invalidate(notificationSchedulerProvider);
-      
+
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) {

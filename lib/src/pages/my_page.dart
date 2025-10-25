@@ -333,7 +333,10 @@ class MyPage extends ConsumerWidget {
                     horizontal: 20,
                     vertical: 8,
                   ),
-                  leading: const Icon(Icons.notifications_active, color: Color(0xFF20C997)),
+                  leading: const Icon(
+                    Icons.notifications_active,
+                    color: Color(0xFF20C997),
+                  ),
                   title: const Text(
                     '테스트 알림',
                     style: TextStyle(
@@ -347,7 +350,9 @@ class MyPage extends ConsumerWidget {
                   ),
                   onTap: () async {
                     try {
-                      final notificationService = ref.read(notificationServiceProvider);
+                      final notificationService = ref.read(
+                        notificationServiceProvider,
+                      );
                       notificationService.whenData((service) {
                         service.showTestNotification();
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -388,7 +393,9 @@ class MyPage extends ConsumerWidget {
                   ),
                   onTap: () async {
                     try {
-                      final notificationService = ref.read(notificationServiceProvider);
+                      final notificationService = ref.read(
+                        notificationServiceProvider,
+                      );
                       notificationService.whenData((service) {
                         service.scheduleTestNotification();
                         ScaffoldMessenger.of(context).showSnackBar(

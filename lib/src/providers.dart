@@ -626,9 +626,15 @@ final notificationSchedulerProvider = Provider.autoDispose((ref) {
   final settings = ref.watch(notificationSettingsProvider);
 
   print('📲 알림 스케줄러 실행 중...');
-  print('  - NotificationService: ${notificationServiceAsync.hasValue ? '준비됨' : '대기중'}');
-  print('  - Ingredients: ${ingredientsAsync.hasValue ? '${ingredientsAsync.value?.length ?? 0}개' : '대기중'}');
-  print('  - Settings: 알림=${settings.notificationsEnabled ? '활성화' : '비활성화'}, D-${settings.daysBefore}');
+  print(
+    '  - NotificationService: ${notificationServiceAsync.hasValue ? '준비됨' : '대기중'}',
+  );
+  print(
+    '  - Ingredients: ${ingredientsAsync.hasValue ? '${ingredientsAsync.value?.length ?? 0}개' : '대기중'}',
+  );
+  print(
+    '  - Settings: 알림=${settings.notificationsEnabled ? '활성화' : '비활성화'}, D-${settings.daysBefore}',
+  );
 
   // Only schedule notifications if all dependencies are ready
   if (notificationServiceAsync.hasValue && ingredientsAsync.hasValue) {
@@ -648,15 +654,16 @@ final notificationSchedulerProvider = Provider.autoDispose((ref) {
 
       print('  현재 시간: ${now.toString()}');
       print('  확인할 재료 개수: ${ingredients.length}');
-      
+
       // 신규 재료 감지 (오늘 등록된 재료)
       final newIngredientsToday = ingredients.where((ing) {
-        final createdToday = ing.createdAt.year == now.year && 
-                           ing.createdAt.month == now.month && 
-                           ing.createdAt.day == now.day;
+        final createdToday =
+            ing.createdAt.year == now.year &&
+            ing.createdAt.month == now.month &&
+            ing.createdAt.day == now.day;
         return createdToday;
       }).toList();
-      
+
       if (newIngredientsToday.isNotEmpty) {
         print('  🆕 신규 등록 재료: ${newIngredientsToday.length}개');
         for (final ing in newIngredientsToday) {
@@ -667,68 +674,87 @@ final notificationSchedulerProvider = Provider.autoDispose((ref) {
       for (final ingredient in ingredients) {
         final expiryDate = ingredient.expiryDate;
         final daysUntilExpiry = expiryDate.difference(now).inDays;
-        
+
         final isNewIngredient = newIngredientsToday.contains(ingredient);
         final newMarker = isNewIngredient ? '🆕 ' : '';
 
-        print('  └─ $newMarker${ingredient.name}: 유통기한=${expiryDate.toString()}, D-$daysUntilExpiry');
+        print(
+          '  └─ $newMarker${ingredient.name}: 유통기한=${expiryDate.toString()}, D-$daysUntilExpiry',
+        );
 
         // 유통기한이 이미 지났거나 오늘인 경우 즉시 알림
         if (daysUntilExpiry <= 0) {
+          // 지금부터 1분 후에 알림 (시간 설정 안 함 - 즉시 발송)
+          final immediateNotificationTime = now.add(const Duration(minutes: 1));
           notificationService.scheduleNotification(
             id: ingredient.id.hashCode,
             title: '🚨 유통기한 초과!',
             body:
                 '${ingredient.name}의 유통기한이 ${daysUntilExpiry == 0 ? '오늘까지' : '${-daysUntilExpiry}일 지남'}입니다!',
-            scheduledDate: now.add(const Duration(minutes: 1)), // 1분 후 즉시 알림
+            scheduledDate: immediateNotificationTime, // 즉시 발송 (시간 강제 변경 안 함)
           );
           expiredCount++;
           scheduledCount++;
-          print('     ✓ 즉시 알림 예약 (유통기한 경과)');
+          print(
+            '     ✓ 즉시 알림 예약 (${immediateNotificationTime.toString()})',
+          );
         }
         // 설정된 일수 이내에 유통기한이 도래하는 경우
         else if (daysUntilExpiry <= settings.daysBefore) {
-          final notificationDate = DateTime(
+          // 내일 9시에 알림
+          final tomorrowAt9Am = DateTime(
             now.year,
             now.month,
             now.day + 1,
-            9, // 내일 오전 9시
+            9,
+            0,
+            0,
           );
 
           notificationService.scheduleNotification(
             id: ingredient.id.hashCode,
             title: '⚠️ 유통기한 임박 알림',
             body: '${ingredient.name}의 유통기한이 ${daysUntilExpiry}일 남았습니다!',
-            scheduledDate: notificationDate,
+            scheduledDate: tomorrowAt9Am, // 9시로 설정하여 전달
           );
           imminentCount++;
           scheduledCount++;
-          print('     ✓ 임박 알림 예약 (내일 9시)');
+          print('     ✓ 임박 알림 예약 (내일 09:00:00)');
         }
         // 정상적인 미래 알림
         else {
-          final notificationDate = expiryDate.subtract(
+          final expiryDay = DateTime(
+            expiryDate.year,
+            expiryDate.month,
+            expiryDate.day,
+          );
+          final notificationDay = expiryDay.subtract(
             Duration(days: settings.daysBefore),
           );
-          if (notificationDate.isAfter(now)) {
+
+          if (notificationDay.isAfter(now) ||
+              (notificationDay.year == now.year &&
+                  notificationDay.month == now.month &&
+                  notificationDay.day == now.day)) {
+            // 알림 날짜의 오전 9시에 알림 (이미 9시로 설정되어 전달)
             final scheduledDateTime = DateTime(
-              notificationDate.year,
-              notificationDate.month,
-              notificationDate.day,
-              9, // 오전 9시
+              notificationDay.year,
+              notificationDay.month,
+              notificationDay.day,
+              9,
+              0,
+              0,
             );
 
             notificationService.scheduleNotification(
               id: ingredient.id.hashCode,
               title: '유통기한 임박 알림',
               body: '${ingredient.name}의 유통기한이 ${settings.daysBefore}일 남았습니다!',
-              scheduledDate: scheduledDateTime,
+              scheduledDate: scheduledDateTime, // 9시로 설정하여 전달
             );
             futureCount++;
             scheduledCount++;
-            print(
-              '     ✓ 정규 알림 예약 (${scheduledDateTime.toString()})',
-            );
+            print('     ✓ 정규 알림 예약 (${scheduledDateTime.toString()})');
           }
         }
       }
@@ -743,7 +769,9 @@ final notificationSchedulerProvider = Provider.autoDispose((ref) {
     }
   } else {
     print('⏳ 알림 스케줄러 대기 중...');
-    print('  - NotificationService: ${notificationServiceAsync.hasValue ? '준비됨' : '로딩중'}');
+    print(
+      '  - NotificationService: ${notificationServiceAsync.hasValue ? '준비됨' : '로딩중'}',
+    );
     print('  - Ingredients: ${ingredientsAsync.hasValue ? '준비됨' : '로딩중'}');
   }
 });
