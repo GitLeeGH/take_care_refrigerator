@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
@@ -5,9 +6,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
-  
-  static const String _notificationPermissionKey = 'notification_permissions_requested';
-  static const String _exactAlarmPermissionKey = 'exact_alarm_permission_requested';
+
+  static const String _notificationPermissionKey =
+      'notification_permissions_requested';
+  static const String _exactAlarmPermissionKey =
+      'exact_alarm_permission_requested';
 
   bool _initialized = false;
 
@@ -59,7 +62,7 @@ class NotificationService {
 
       // 권한 요청 (한 번만)
       await _requestPermissionsOnce();
-      
+
       _initialized = true;
       print('📱 NotificationService 초기화 완료!');
     } catch (e) {
@@ -70,7 +73,7 @@ class NotificationService {
   Future<void> _requestPermissionsOnce() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      
+
       // Android 알림 권한 요청
       final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
           flutterLocalNotificationsPlugin
@@ -115,14 +118,16 @@ class NotificationService {
     try {
       // scheduledDate를 그대로 사용 (시간이 이미 설정되어 있음)
       final tzScheduledDate = tz.TZDateTime.from(scheduledDate, tz.local);
-      
+
       // 과거 시간으로 스케줄된 경우 스킵
       if (tzScheduledDate.isBefore(tz.TZDateTime.now(tz.local))) {
         print('⏭️ 알림 예약 스킵: 예약 시간이 과거입니다 ($tzScheduledDate)');
         return;
       }
-      
-      print('⏰ 알림 예약: ID=$id, 제목="$title", 예약시간="${tzScheduledDate.toString()}"');
+
+      print(
+        '⏰ 알림 예약: ID=$id, 제목="$title", 예약시간="${tzScheduledDate.toString()}"',
+      );
 
       await flutterLocalNotificationsPlugin.zonedSchedule(
         id,
@@ -149,7 +154,7 @@ class NotificationService {
         ),
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       );
-      
+
       print('✅ 알림 예약 성공: $title');
     } catch (e) {
       print('❌ 알림 예약 실패: $e');
@@ -188,28 +193,30 @@ class NotificationService {
   Future<void> scheduleTestNotification() async {
     try {
       print('🧪 5초 후 테스트 알림 예약 중...');
-      final now = DateTime.now();
-      final testTime = now.add(const Duration(seconds: 5));
-      final tzTestTime = tz.TZDateTime.from(testTime, tz.local);
-
-      await flutterLocalNotificationsPlugin.zonedSchedule(
-        888,
-        '⏱️ 테스트 예약 알림',
-        '5초 후에 표시되는 알림입니다!',
-        tzTestTime,
-        const NotificationDetails(
-          android: AndroidNotificationDetails(
-            'refrigerator_channel_id',
-            '유통기한 알림',
-            channelDescription: '냉장고 유통기한 알림 채널',
-            importance: Importance.max,
-            priority: Priority.high,
-            enableVibration: true,
-            playSound: true,
+      
+      // 5초 후에 즉시 알림 표시 (Timer 사용)
+      // exactAllowWhileIdle는 짧은 시간에 작동 안 할 수 있으므로 Timer 사용
+      Timer(const Duration(seconds: 5), () async {
+        print('⏰ 5초 경과 - 테스트 알림 표시 중...');
+        await flutterLocalNotificationsPlugin.show(
+          888,
+          '⏱️ 테스트 예약 알림',
+          '5초 후에 표시되는 알림입니다!',
+          const NotificationDetails(
+            android: AndroidNotificationDetails(
+              'refrigerator_channel_id',
+              '유통기한 알림',
+              channelDescription: '냉장고 유통기한 알림 채널',
+              importance: Importance.max,
+              priority: Priority.high,
+              enableVibration: true,
+              playSound: true,
+            ),
           ),
-        ),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      );
+        );
+        print('✅ 테스트 알림 표시 완료');
+      });
+      
       print('✅ 테스트 예약 알림 설정 완료 (5초 후 표시 예정)');
     } catch (e) {
       print('❌ 테스트 예약 알림 설정 실패: $e');
