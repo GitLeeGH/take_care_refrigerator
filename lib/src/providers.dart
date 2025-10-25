@@ -230,17 +230,72 @@ final recommendedIdsProvider = FutureProvider.autoDispose<List<String>>((
   final ingredients = ingredientsAsync.asData?.value ?? [];
   final ingredientNames = ingredients.map((e) => e.name).toList();
 
-  final response = await supabase.rpc(
-    'get_recommended_recipes',
-    params: {'p_user_ingredients': ingredientNames},
-  );
-
-  if (response == null) {
-    return []; // Handle potential null response from RPC
+  if (ingredientNames.isEmpty) {
+    return [];
   }
 
-  // The RPC returns a list of objects like [{id: '...'}, {id: '...'}]
-  return (response as List).map((item) => item['id'] as String).toList();
+  try {
+    // Step 1: Fetch all recipes
+    final allRecipes = await supabase
+        .from('recipes')
+        .select()
+        .then(
+          (data) =>
+              (data as List).map((item) => Recipe.fromJson(item)).toList(),
+        );
+
+    // Helper function for fuzzy ingredient matching
+    bool ingredientMatches(String recipeIng, String userIng) {
+      final recipeWords = recipeIng.toLowerCase().split(RegExp(r'[\s,\-()]+'));
+      final userWords = userIng.toLowerCase().split(RegExp(r'[\s,\-()]+'));
+
+      // Check if any word from recipe ingredient matches any word from user ingredient
+      return recipeWords.any(
+        (rWord) => userWords.any((uWord) {
+          if (uWord.isEmpty || rWord.isEmpty) return false;
+          // Require at least 3 characters to match, or exact word match
+          if (uWord.length >= 3 && rWord.length >= 3) {
+            return rWord.startsWith(uWord) || uWord.startsWith(rWord);
+          }
+          return rWord == uWord;
+        }),
+      );
+    }
+
+    // Step 2: Filter recipes that contain at least one ingredient from user's ingredients
+    final filteredRecipes = allRecipes.where((recipe) {
+      final hasAnyIngredient = recipe.requiredIngredients.any(
+        (recipeIng) => ingredientNames.any(
+          (userIng) => ingredientMatches(recipeIng, userIng),
+        ),
+      );
+      return hasAnyIngredient;
+    }).toList();
+
+    // Step 3: Sort by how many ingredients the user has (descending)
+    filteredRecipes.sort((a, b) {
+      int countA = a.requiredIngredients
+          .where(
+            (recipeIng) => ingredientNames.any(
+              (userIng) => ingredientMatches(recipeIng, userIng),
+            ),
+          )
+          .length;
+      int countB = b.requiredIngredients
+          .where(
+            (recipeIng) => ingredientNames.any(
+              (userIng) => ingredientMatches(recipeIng, userIng),
+            ),
+          )
+          .length;
+      return countB.compareTo(countA); // Descending order
+    });
+
+    final result = filteredRecipes.map((r) => r.id).toList();
+    return result;
+  } catch (e) {
+    return [];
+  }
 });
 
 // 2. Popular Sort
@@ -577,29 +632,48 @@ final likedRecipesProvider = FutureProvider.autoDispose<List<Recipe>>((
   return (response as List).map((item) => Recipe.fromJson(item)).toList();
 });
 
-final likeRecipeProvider = Provider.autoDispose((ref) {
+final likeRecipeProvider = Provider((ref) {
   final supabase = ref.watch(supabaseProvider);
   final user = supabase.auth.currentUser;
 
   Future<void> toggleLike(String recipeId, bool isLiked) async {
-    if (user == null) return;
+    print(
+      '[toggleLike] 함수 호출: recipeId=$recipeId, isLiked=$isLiked, userId=${user?.id}',
+    );
 
-    if (isLiked) {
-      await supabase.from('recipe_likes').delete().match({
-        'user_id': user.id,
-        'recipe_id': recipeId,
-      });
-    } else {
-      await supabase.from('recipe_likes').insert({
-        'user_id': user.id,
-        'recipe_id': recipeId,
-      });
+    if (user == null) {
+      print('[toggleLike] 사용자가 없습니다!');
+      return;
     }
-    // 좋아요 변경 후 모든 관련 provider 무효화
-    ref.invalidate(likedRecipeIdsProvider); // 좋아요한 레시피 ID 목록 갱신
-    ref.invalidate(likedRecipesProvider); // 좋아요한 레시피 상세 정보 갱신
-    ref.invalidate(popularIdsProvider); // 인기순 레시피 재조회
-    ref.invalidate(paginatedRecipesProvider); // 페이지네이션 레시피 재조회
+
+    try {
+      if (isLiked) {
+        print('[toggleLike] 좋아요 삭제 중...');
+        await supabase.from('recipe_likes').delete().match({
+          'user_id': user.id,
+          'recipe_id': recipeId,
+        });
+        print('[toggleLike] 좋아요 삭제 완료');
+      } else {
+        print('[toggleLike] 좋아요 추가 중...');
+        await supabase.from('recipe_likes').insert({
+          'user_id': user.id,
+          'recipe_id': recipeId,
+        });
+        print('[toggleLike] 좋아요 추가 완료');
+      }
+
+      // 좋아요 변경 후 모든 관련 provider 무효화
+      print('[toggleLike] Provider 무효화 중...');
+      ref.invalidate(likedRecipeIdsProvider); // 좋아요한 레시피 ID 목록 갱신
+      ref.invalidate(likedRecipesProvider); // 좋아요한 레시피 상세 정보 갱신
+      ref.invalidate(popularIdsProvider); // 인기순 레시피 재조회
+      ref.invalidate(paginatedRecipesProvider); // 페이지네이션 레시피 재조회
+      print('[toggleLike] Provider 무효화 완료!');
+    } catch (e) {
+      print('[toggleLike] 데이터베이스 오류: $e');
+      rethrow;
+    }
   }
 
   return toggleLike;
@@ -617,7 +691,8 @@ final notificationServiceProvider = FutureProvider<NotificationService>((
 });
 
 final notificationSchedulerProvider = Provider.autoDispose((ref) {
-  // Notifications are not supported on web, so disable this provider.
+  // 스케줄러 비활성화: 동적 알림(generatedNotificationsProvider)만 사용
+  // 시스템 알림 중복 방지를 위해 초기 로그인 시에만 스케줄함
   if (kIsWeb) return;
 
   // Depend on the service provider to ensure it's initialized
@@ -642,127 +717,54 @@ final notificationSchedulerProvider = Provider.autoDispose((ref) {
     final ingredients = ingredientsAsync.value!;
 
     if (settings.notificationsEnabled) {
+      // 매일 아침 9시에만 알림 스케줄
+      final now = DateTime.now();
+
+      // 오늘 아침 9시
+      DateTime scheduleTime = DateTime(now.year, now.month, now.day, 9, 0, 0);
+
+      // 만약 이미 9시가 지났으면 내일 9시로 설정
+      if (now.isAfter(scheduleTime)) {
+        scheduleTime = scheduleTime.add(const Duration(days: 1));
+      }
+
       print('🔔 알림 스케줄링 시작...');
       notificationService.cancelAllNotifications();
       print('  ✓ 기존 알림 취소 완료');
+      print('  예약 시간: ${scheduleTime.toString()}');
 
-      final now = DateTime.now();
       int scheduledCount = 0;
-      int expiredCount = 0;
-      int imminentCount = 0;
-      int futureCount = 0;
-
-      print('  현재 시간: ${now.toString()}');
-      print('  확인할 재료 개수: ${ingredients.length}');
-
-      // 신규 재료 감지 (오늘 등록된 재료)
-      final newIngredientsToday = ingredients.where((ing) {
-        final createdToday =
-            ing.createdAt.year == now.year &&
-            ing.createdAt.month == now.month &&
-            ing.createdAt.day == now.day;
-        return createdToday;
-      }).toList();
-
-      if (newIngredientsToday.isNotEmpty) {
-        print('  🆕 신규 등록 재료: ${newIngredientsToday.length}개');
-        for (final ing in newIngredientsToday) {
-          print('     └─ ${ing.name} (${ing.expiryDate.toString()})');
-        }
-      }
 
       for (final ingredient in ingredients) {
         final expiryDate = ingredient.expiryDate;
         final daysUntilExpiry = expiryDate.difference(now).inDays;
 
-        final isNewIngredient = newIngredientsToday.contains(ingredient);
-        final newMarker = isNewIngredient ? '🆕 ' : '';
+        // 유통기한이 3일 이내인 재료만 알림
+        if (daysUntilExpiry <= settings.daysBefore) {
+          String title;
+          String body;
 
-        print(
-          '  └─ $newMarker${ingredient.name}: 유통기한=${expiryDate.toString()}, D-$daysUntilExpiry',
-        );
-
-        // 유통기한이 이미 지났거나 오늘인 경우 즉시 알림
-        if (daysUntilExpiry <= 0) {
-          // 지금부터 1분 후에 알림 (시간 설정 안 함 - 즉시 발송)
-          final immediateNotificationTime = now.add(const Duration(minutes: 1));
-          notificationService.scheduleNotification(
-            id: ingredient.id.hashCode,
-            title: '🚨 유통기한 초과!',
-            body:
-                '${ingredient.name}의 유통기한이 ${daysUntilExpiry == 0 ? '오늘까지' : '${-daysUntilExpiry}일 지남'}입니다!',
-            scheduledDate: immediateNotificationTime, // 즉시 발송 (시간 강제 변경 안 함)
-          );
-          expiredCount++;
-          scheduledCount++;
-          print(
-            '     ✓ 즉시 알림 예약 (${immediateNotificationTime.toString()})',
-          );
-        }
-        // 설정된 일수 이내에 유통기한이 도래하는 경우
-        else if (daysUntilExpiry <= settings.daysBefore) {
-          // 내일 9시에 알림
-          final tomorrowAt9Am = DateTime(
-            now.year,
-            now.month,
-            now.day + 1,
-            9,
-            0,
-            0,
-          );
-
-          notificationService.scheduleNotification(
-            id: ingredient.id.hashCode,
-            title: '⚠️ 유통기한 임박 알림',
-            body: '${ingredient.name}의 유통기한이 ${daysUntilExpiry}일 남았습니다!',
-            scheduledDate: tomorrowAt9Am, // 9시로 설정하여 전달
-          );
-          imminentCount++;
-          scheduledCount++;
-          print('     ✓ 임박 알림 예약 (내일 09:00:00)');
-        }
-        // 정상적인 미래 알림
-        else {
-          final expiryDay = DateTime(
-            expiryDate.year,
-            expiryDate.month,
-            expiryDate.day,
-          );
-          final notificationDay = expiryDay.subtract(
-            Duration(days: settings.daysBefore),
-          );
-
-          if (notificationDay.isAfter(now) ||
-              (notificationDay.year == now.year &&
-                  notificationDay.month == now.month &&
-                  notificationDay.day == now.day)) {
-            // 알림 날짜의 오전 9시에 알림 (이미 9시로 설정되어 전달)
-            final scheduledDateTime = DateTime(
-              notificationDay.year,
-              notificationDay.month,
-              notificationDay.day,
-              9,
-              0,
-              0,
-            );
-
-            notificationService.scheduleNotification(
-              id: ingredient.id.hashCode,
-              title: '유통기한 임박 알림',
-              body: '${ingredient.name}의 유통기한이 ${settings.daysBefore}일 남았습니다!',
-              scheduledDate: scheduledDateTime, // 9시로 설정하여 전달
-            );
-            futureCount++;
-            scheduledCount++;
-            print('     ✓ 정규 알림 예약 (${scheduledDateTime.toString()})');
+          if (daysUntilExpiry <= 0) {
+            title = '🚨 유통기한 초과!';
+            body =
+                '${ingredient.name}의 유통기한이 ${daysUntilExpiry == 0 ? '오늘까지' : '${-daysUntilExpiry}일 지남'}입니다!';
+          } else {
+            title = '⚠️ 유통기한 임박!';
+            body = '${ingredient.name}의 유통기한이 ${daysUntilExpiry}일 남았습니다!';
           }
+
+          notificationService.scheduleNotification(
+            id: ingredient.id.hashCode,
+            title: title,
+            body: body,
+            scheduledDate: scheduleTime,
+          );
+          scheduledCount++;
         }
       }
 
       print('🔔 알림 스케줄링 완료!');
-      print('  - 즉시 알림: $expiredCount개');
-      print('  - 임박 알림: $imminentCount개');
-      print('  - 정규 알림: $futureCount개');
+      print('  - 총 예약: $scheduledCount개');
       print('  - 총 예약: $scheduledCount개');
     } else {
       print('🔕 알림이 비활성화되어 있습니다.');
@@ -792,7 +794,98 @@ final notificationSettingsProvider =
       NotificationSettingsNotifier.new,
     );
 
+// 삭제된 알림을 관리하는 Provider
+class DismissedNotificationsNotifier extends Notifier<Set<String>> {
+  @override
+  Set<String> build() => <String>{};
+
+  void dismiss(String notificationId) {
+    state = {...state, notificationId};
+  }
+
+  void dismissAll(List<String> notificationIds) {
+    state = {...state, ...notificationIds};
+  }
+
+  void clearDismissed() {
+    state = <String>{};
+  }
+
+  void removeDismissed(String notificationId) {
+    state = {...state}..remove(notificationId);
+  }
+}
+
+final dismissedNotificationsProvider =
+    NotifierProvider<DismissedNotificationsNotifier, Set<String>>(
+      DismissedNotificationsNotifier.new,
+    );
+
 final notificationListProvider =
     NotifierProvider<NotificationListNotifier, List<NotificationItem>>(
       NotificationListNotifier.new,
     );
+
+// Provider to calculate notifications from ingredients (updates whenever ingredients change)
+final generatedNotificationsProvider =
+    Provider.autoDispose<List<NotificationItem>>((ref) {
+      final ingredientsAsync = ref.watch(ingredientsProvider);
+      final dismissedIds = ref.watch(dismissedNotificationsProvider);
+      final now = DateTime.now();
+
+      if (!ingredientsAsync.hasValue) {
+        return [];
+      }
+
+      final ingredients = ingredientsAsync.value!;
+      final notifications = <NotificationItem>[];
+
+      print(
+        '[generatedNotificationsProvider] 알림 동적 생성: ${ingredients.length}개 재료 확인',
+      );
+
+      for (final ingredient in ingredients) {
+        final daysLeft = ingredient.expiryDate.difference(now).inDays;
+
+        if (daysLeft <= 3) {
+          // 삭제된 알림이면 스킵
+          if (dismissedIds.contains(ingredient.id)) {
+            continue;
+          }
+
+          final NotificationPriority priority;
+          final String title;
+          final String message;
+
+          if (daysLeft <= 0) {
+            priority = NotificationPriority.urgent;
+            title = '🚨 유통기한 초과!';
+            message = daysLeft == 0
+                ? '${ingredient.name}의 유통기한이 오늘까지입니다'
+                : '${ingredient.name}의 유통기한이 ${-daysLeft}일 지났습니다';
+          } else if (daysLeft == 1) {
+            priority = NotificationPriority.warning;
+            title = '⚠️ 유통기한 임박!';
+            message = '${ingredient.name}의 유통기한이 내일까지입니다';
+          } else {
+            priority = NotificationPriority.warning;
+            title = '⚠️ 유통기한 임박!';
+            message = '${ingredient.name}의 유통기한이 ${daysLeft}일 남았습니다';
+          }
+
+          notifications.add(
+            NotificationItem(
+              id: ingredient.id,
+              title: title,
+              message: message,
+              createdAt: now,
+              ingredientId: ingredient.id,
+              daysLeft: daysLeft,
+              priority: priority,
+            ),
+          );
+        }
+      }
+
+      return notifications;
+    });

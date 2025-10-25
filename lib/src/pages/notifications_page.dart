@@ -11,8 +11,11 @@ class NotificationsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(notificationSettingsProvider);
     final settingsNotifier = ref.read(notificationSettingsProvider.notifier);
-    final notifications = ref.watch(notificationListProvider);
-    final notificationsNotifier = ref.read(notificationListProvider.notifier);
+    final dismissedNotifier = ref.read(dismissedNotificationsProvider.notifier);
+
+    // 동적으로 생성된 알림 사용 (중복 방지, 삭제된 항목 제외)
+    final notifications = ref.watch(generatedNotificationsProvider);
+
     const accentColor = Color(0xFF20C997);
 
     return Scaffold(
@@ -50,31 +53,17 @@ class NotificationsPage extends ConsumerWidget {
           if (notifications.isNotEmpty)
             TextButton(
               onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('모든 알림 삭제'),
-                    content: const Text('모든 알림을 삭제하시겠습니까?'),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('취소'),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          notificationsNotifier.clearAllNotifications();
-                          Navigator.of(context).pop();
-                        },
-                        child: const Text(
-                          '삭제',
-                          style: TextStyle(color: Colors.red),
-                        ),
-                      ),
-                    ],
-                  ),
+                dismissedNotifier.dismissAll(
+                  notifications.map((n) => n.id).toList(),
                 );
               },
-              child: const Text('모두 삭제', style: TextStyle(color: Colors.red)),
+              child: const Text(
+                '모두 지우기',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
         ],
       ),
@@ -93,11 +82,10 @@ class NotificationsPage extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
             ...notifications.map(
-              (notification) => _buildNotificationItem(
-                context,
-                notification,
-                () => notificationsNotifier.removeNotification(notification.id),
-              ),
+              (notification) =>
+                  _buildNotificationItem(context, notification, () {
+                    dismissedNotifier.dismiss(notification.id);
+                  }),
             ),
             const SizedBox(height: 24),
             const Divider(),

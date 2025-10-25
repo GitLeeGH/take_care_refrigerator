@@ -407,7 +407,7 @@ class AppShell extends ConsumerWidget {
     // 알림 스케줄러 활성화
     ref.watch(notificationSchedulerProvider);
     final pageIndex = ref.watch(pageIndexProvider);
-    final notifications = ref.watch(notificationListProvider);
+    final notifications = ref.watch(generatedNotificationsProvider);
 
     return Scaffold(
       body: IndexedStack(index: pageIndex, children: _pages),

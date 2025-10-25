@@ -455,8 +455,12 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
                   isLiked ? Icons.favorite : Icons.favorite_border,
                   color: isLiked ? Colors.redAccent : mediumGray,
                 ),
-                onPressed: () {
-                  ref.read(likeRecipeProvider)(recipe.id, isLiked);
+                onPressed: () async {
+                  try {
+                    await ref.read(likeRecipeProvider)(recipe.id, isLiked);
+                  } catch (e) {
+                    // 오류 처리
+                  }
                 },
               );
             },

@@ -118,42 +118,100 @@ class NotificationService {
     try {
       // scheduledDate를 그대로 사용 (시간이 이미 설정되어 있음)
       final tzScheduledDate = tz.TZDateTime.from(scheduledDate, tz.local);
-
-      // 과거 시간으로 스케줄된 경우 스킵
-      if (tzScheduledDate.isBefore(tz.TZDateTime.now(tz.local))) {
-        print('⏭️ 알림 예약 스킵: 예약 시간이 과거입니다 ($tzScheduledDate)');
-        return;
-      }
+      final now = tz.TZDateTime.now(tz.local);
 
       print(
-        '⏰ 알림 예약: ID=$id, 제목="$title", 예약시간="${tzScheduledDate.toString()}"',
+        '⏰ 알림 예약: ID=$id, 제목="$title", 예약시간="${tzScheduledDate.toString()}", 현재시간="${now.toString()}"',
       );
 
-      await flutterLocalNotificationsPlugin.zonedSchedule(
-        id,
-        title,
-        body,
-        tzScheduledDate,
-        const NotificationDetails(
-          android: AndroidNotificationDetails(
-            'refrigerator_channel_id',
-            '유통기한 알림',
-            channelDescription: '냉장고 유통기한 알림 채널',
-            importance: Importance.max,
-            priority: Priority.high,
-            showWhen: true,
-            enableVibration: true,
-            playSound: true,
+      // 예약 시간까지의 지연 시간 계산
+      final delayDuration = tzScheduledDate.difference(now);
+
+      if (delayDuration.isNegative) {
+        // 과거 시간: 즉시 표시
+        print('⚠️ 과거 시간으로 스케줄됨 - 즉시 표시합니다');
+        await flutterLocalNotificationsPlugin.show(
+          id,
+          title,
+          body,
+          const NotificationDetails(
+            android: AndroidNotificationDetails(
+              'refrigerator_channel_id',
+              '유통기한 알림',
+              channelDescription: '냉장고 유통기한 알림 채널',
+              importance: Importance.max,
+              priority: Priority.high,
+              showWhen: true,
+              enableVibration: true,
+              playSound: true,
+            ),
+            iOS: DarwinNotificationDetails(
+              badgeNumber: 1,
+              presentAlert: true,
+              presentBadge: true,
+              presentSound: true,
+            ),
           ),
-          iOS: DarwinNotificationDetails(
-            badgeNumber: 1,
-            presentAlert: true,
-            presentBadge: true,
-            presentSound: true,
-          ),
-        ),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      );
+        );
+      } else if (delayDuration.inSeconds <= 5) {
+        // 5초 이하: Timer + show() 사용 (정확성 향상)
+        print('🕐 단기 알림: Timer를 사용하여 ${delayDuration.inSeconds}초 후 표시합니다');
+        Timer(delayDuration, () async {
+          await flutterLocalNotificationsPlugin.show(
+            id,
+            title,
+            body,
+            const NotificationDetails(
+              android: AndroidNotificationDetails(
+                'refrigerator_channel_id',
+                '유통기한 알림',
+                channelDescription: '냉장고 유통기한 알림 채널',
+                importance: Importance.max,
+                priority: Priority.high,
+                showWhen: true,
+                enableVibration: true,
+                playSound: true,
+              ),
+              iOS: DarwinNotificationDetails(
+                badgeNumber: 1,
+                presentAlert: true,
+                presentBadge: true,
+                presentSound: true,
+              ),
+            ),
+          );
+          print('✅ Timer로 즉시 표시: $title');
+        });
+      } else {
+        // 5초 초과: Timer 사용 (zonedSchedule 대신)
+        print('� 장기 알림: Timer를 사용하여 ${delayDuration.inSeconds}초 후 표시합니다');
+        Timer(delayDuration, () async {
+          await flutterLocalNotificationsPlugin.show(
+            id,
+            title,
+            body,
+            const NotificationDetails(
+              android: AndroidNotificationDetails(
+                'refrigerator_channel_id',
+                '유통기한 알림',
+                channelDescription: '냉장고 유통기한 알림 채널',
+                importance: Importance.max,
+                priority: Priority.high,
+                showWhen: true,
+                enableVibration: true,
+                playSound: true,
+              ),
+              iOS: DarwinNotificationDetails(
+                badgeNumber: 1,
+                presentAlert: true,
+                presentBadge: true,
+                presentSound: true,
+              ),
+            ),
+          );
+          print('✅ Timer로 표시: $title');
+        });
+      }
 
       print('✅ 알림 예약 성공: $title');
     } catch (e) {
@@ -163,64 +221,6 @@ class NotificationService {
 
   Future<void> cancelAllNotifications() async {
     await flutterLocalNotificationsPlugin.cancelAll();
-  }
-
-  Future<void> showTestNotification() async {
-    try {
-      print('🧪 테스트 알림 표시 중...');
-      await flutterLocalNotificationsPlugin.show(
-        999,
-        '✅ 테스트 알림',
-        '알림 시스템이 정상적으로 작동합니다!',
-        const NotificationDetails(
-          android: AndroidNotificationDetails(
-            'refrigerator_channel_id',
-            '유통기한 알림',
-            channelDescription: '냉장고 유통기한 알림 채널',
-            importance: Importance.max,
-            priority: Priority.high,
-            enableVibration: true,
-            playSound: true,
-          ),
-        ),
-      );
-      print('✅ 테스트 알림 표시 완료');
-    } catch (e) {
-      print('❌ 테스트 알림 표시 실패: $e');
-    }
-  }
-
-  Future<void> scheduleTestNotification() async {
-    try {
-      print('🧪 5초 후 테스트 알림 예약 중...');
-      
-      // 5초 후에 즉시 알림 표시 (Timer 사용)
-      // exactAllowWhileIdle는 짧은 시간에 작동 안 할 수 있으므로 Timer 사용
-      Timer(const Duration(seconds: 5), () async {
-        print('⏰ 5초 경과 - 테스트 알림 표시 중...');
-        await flutterLocalNotificationsPlugin.show(
-          888,
-          '⏱️ 테스트 예약 알림',
-          '5초 후에 표시되는 알림입니다!',
-          const NotificationDetails(
-            android: AndroidNotificationDetails(
-              'refrigerator_channel_id',
-              '유통기한 알림',
-              channelDescription: '냉장고 유통기한 알림 채널',
-              importance: Importance.max,
-              priority: Priority.high,
-              enableVibration: true,
-              playSound: true,
-            ),
-          ),
-        );
-        print('✅ 테스트 알림 표시 완료');
-      });
-      
-      print('✅ 테스트 예약 알림 설정 완료 (5초 후 표시 예정)');
-    } catch (e) {
-      print('❌ 테스트 예약 알림 설정 실패: $e');
-    }
   }
 
   Future<void> showImmediateExpiryAlert(
