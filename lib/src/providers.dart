@@ -720,10 +720,12 @@ final notificationSchedulerProvider = Provider.autoDispose((ref) {
       // 매일 아침 9시에만 알림 스케줄
       final now = DateTime.now();
 
-      // 오늘 아침 9시
+      // 오전 9시
       DateTime scheduleTime = DateTime(now.year, now.month, now.day, 9, 0, 0);
 
-      // 만약 이미 9시가 지났으면 내일 9시로 설정
+      print('⏰ 알림 예약 시간 설정: $scheduleTime (현재: $now)');
+
+      // 만약 이미 설정 시간이 지났으면 내일 같은 시간으로 설정
       if (now.isAfter(scheduleTime)) {
         scheduleTime = scheduleTime.add(const Duration(days: 1));
       }

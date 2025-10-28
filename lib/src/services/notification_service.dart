@@ -60,6 +60,10 @@ class NotificationService {
       await flutterLocalNotificationsPlugin.initialize(initializationSettings);
       print('✅ FlutterLocalNotificationsPlugin 초기화 완료');
 
+      // Android 알림 채널 생성 (zonedSchedule 사용 시 필수)
+      await _createNotificationChannels();
+      print('✅ Android 알림 채널 생성 완료');
+
       // 권한 요청 (한 번만)
       await _requestPermissionsOnce();
 
@@ -109,6 +113,34 @@ class NotificationService {
     }
   }
 
+  // Android 알림 채널 생성 (zonedSchedule 사용 시 필수)
+  Future<void> _createNotificationChannels() async {
+    try {
+      final androidImplementation = flutterLocalNotificationsPlugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+
+      if (androidImplementation != null) {
+        // 기본 알림 채널 생성
+        const AndroidNotificationChannel channel = AndroidNotificationChannel(
+          'refrigerator_channel_id',
+          '유통기한 알림',
+          description: '냉장고 유통기한 알림 채널',
+          importance: Importance.max,
+          playSound: true,
+          enableVibration: true,
+          showBadge: true,
+        );
+
+        await androidImplementation.createNotificationChannel(channel);
+        print('✅ Android 알림 채널 "refrigerator_channel_id" 생성 완료');
+      }
+    } catch (e) {
+      print('⚠️ 알림 채널 생성 중 오류: $e');
+    }
+  }
+
   Future<void> scheduleNotification({
     required int id,
     required String title,
@@ -116,19 +148,16 @@ class NotificationService {
     required DateTime scheduledDate,
   }) async {
     try {
-      // scheduledDate를 그대로 사용 (시간이 이미 설정되어 있음)
-      final tzScheduledDate = tz.TZDateTime.from(scheduledDate, tz.local);
-      final now = tz.TZDateTime.now(tz.local);
+      final now = DateTime.now();
+      final durationUntilScheduled = scheduledDate.difference(now);
 
       print(
-        '⏰ 알림 예약: ID=$id, 제목="$title", 예약시간="${tzScheduledDate.toString()}", 현재시간="${now.toString()}"',
+        '⏰ 알림 예약: ID=$id, 제목="$title", 예약시간="${scheduledDate.toString()}", 현재시간="${now.toString()}"',
       );
+      print('⏳ 남은 시간: ${durationUntilScheduled.inSeconds}초');
 
-      // 예약 시간까지의 지연 시간 계산
-      final delayDuration = tzScheduledDate.difference(now);
-
-      if (delayDuration.isNegative) {
-        // 과거 시간: 즉시 표시
+      // 예약 시간이 과거인 경우 스킵
+      if (durationUntilScheduled.isNegative) {
         print('⚠️ 과거 시간으로 스케줄됨 - 즉시 표시합니다');
         await flutterLocalNotificationsPlugin.show(
           id,
@@ -153,39 +182,12 @@ class NotificationService {
             ),
           ),
         );
-      } else if (delayDuration.inSeconds <= 5) {
-        // 5초 이하: Timer + show() 사용 (정확성 향상)
-        print('🕐 단기 알림: Timer를 사용하여 ${delayDuration.inSeconds}초 후 표시합니다');
-        Timer(delayDuration, () async {
-          await flutterLocalNotificationsPlugin.show(
-            id,
-            title,
-            body,
-            const NotificationDetails(
-              android: AndroidNotificationDetails(
-                'refrigerator_channel_id',
-                '유통기한 알림',
-                channelDescription: '냉장고 유통기한 알림 채널',
-                importance: Importance.max,
-                priority: Priority.high,
-                showWhen: true,
-                enableVibration: true,
-                playSound: true,
-              ),
-              iOS: DarwinNotificationDetails(
-                badgeNumber: 1,
-                presentAlert: true,
-                presentBadge: true,
-                presentSound: true,
-              ),
-            ),
-          );
-          print('✅ Timer로 즉시 표시: $title');
-        });
       } else {
-        // 5초 초과: Timer 사용 (zonedSchedule 대신)
-        print('� 장기 알림: Timer를 사용하여 ${delayDuration.inSeconds}초 후 표시합니다');
-        Timer(delayDuration, () async {
+        // Timer를 사용하여 정확한 시간에 알림 표시
+        print('⏱️ Timer를 사용하여 정확한 시간에 예약');
+
+        Timer(durationUntilScheduled, () async {
+          print('🔔 Timer 실행됨: $title');
           await flutterLocalNotificationsPlugin.show(
             id,
             title,
@@ -209,11 +211,10 @@ class NotificationService {
               ),
             ),
           );
-          print('✅ Timer로 표시: $title');
         });
-      }
 
-      print('✅ 알림 예약 성공: $title');
+        print('✅ 알림 예약 성공: $title (${scheduledDate.toString()})');
+      }
     } catch (e) {
       print('❌ 알림 예약 실패: $e');
     }
