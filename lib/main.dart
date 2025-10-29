@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:app_links/app_links.dart';
+import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'dart:io';
 
 import 'src/theme.dart';
@@ -18,9 +19,41 @@ import 'src/pages/login_page.dart';
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
 import 'src/services/notification_service.dart';
 
+// 백그라운드에서 실행될 알림 콜백 (최상위 함수여야 함)
+@pragma('vm:entry-point')
+void alarmCallback() async {
+  print('🔔 백그라운드 알람 콜백 실행됨!');
+  final notificationService = NotificationService();
+  await notificationService.init();
+
+  // 오늘 날짜 확인
+  final now = DateTime.now();
+  final prefs = await SharedPreferences.getInstance();
+  final todayString =
+      '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+  final lastAlarmDate = prefs.getString('last_alarm_date');
+
+  // 오늘 이미 알림을 보냈으면 스킵
+  if (lastAlarmDate == todayString) {
+    print('✅ 오늘 이미 알림 전송됨');
+    return;
+  }
+
+  // 즉시 알림 표시 (간단한 예시)
+  await notificationService.showImmediateExpiryAlert('테스트 재료', 1);
+  await prefs.setString('last_alarm_date', todayString);
+  print('✅ 백그라운드 알림 전송 완료');
+}
+
 Future<void> main() async {
   print('🚨🚨🚨 MAIN 함수 시작 - NEW VERSION 2024.10.22 🚨🚨🚨');
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize AndroidAlarmManager
+  if (Platform.isAndroid) {
+    await AndroidAlarmManager.initialize();
+    print('✅ AndroidAlarmManager 초기화 완료');
+  }
 
   // Initialize Notification Service
   print('🔔 알림 서비스 초기화 시작');

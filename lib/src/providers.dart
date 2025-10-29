@@ -5,9 +5,48 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:io';
 
 import 'models.dart';
 import 'services/notification_service.dart';
+
+// 백그라운드에서 실행될 알림 콜백 (최상위 함수여야 함)
+@pragma('vm:entry-point')
+void _alarmCallback() async {
+  print('🔔 백그라운드 알람 콜백 실행됨!');
+  final notificationService = NotificationService();
+  await notificationService.init();
+  
+  final prefs = await SharedPreferences.getInstance();
+  final now = DateTime.now();
+  final todayString = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+  final lastAlarmDate = prefs.getString('last_alarm_date');
+  
+  // 오늘 이미 알림을 보냈으면 스킵
+  if (lastAlarmDate == todayString) {
+    print('✅ 오늘 이미 알림 전송됨');
+    return;
+  }
+  
+  // 테스트 알림 표시
+  await notificationService.showImmediateExpiryAlert('유통기한 확인', 0);
+  await prefs.setString('last_alarm_date', todayString);
+  print('✅ 백그라운드 알림 전송 완료');
+  
+  // 내일 9시에 다시 예약
+  final tomorrow9AM = DateTime(now.year, now.month, now.day + 1, 9, 0, 0);
+  await AndroidAlarmManager.oneShotAt(
+    tomorrow9AM,
+    0,
+    _alarmCallback,
+    exact: true,
+    wakeup: true,
+    rescheduleOnReboot: true,
+  );
+  print('✅ 내일 9시 알림 재예약 완료');
+}
 
 // Simple in-memory notification settings model
 class NotificationSettings {
@@ -713,10 +752,9 @@ final notificationSchedulerProvider = Provider.autoDispose((ref) {
 
   // Only schedule notifications if all dependencies are ready
   if (notificationServiceAsync.hasValue && ingredientsAsync.hasValue) {
-    final notificationService = notificationServiceAsync.value!;
     final ingredients = ingredientsAsync.value!;
 
-    if (settings.notificationsEnabled) {
+    if (settings.notificationsEnabled && Platform.isAndroid) {
       // 매일 아침 9시에만 알림 스케줄
       final now = DateTime.now();
 
@@ -730,46 +768,27 @@ final notificationSchedulerProvider = Provider.autoDispose((ref) {
         scheduleTime = scheduleTime.add(const Duration(days: 1));
       }
 
-      print('🔔 알림 스케줄링 시작...');
-      notificationService.cancelAllNotifications();
-      print('  ✓ 기존 알림 취소 완료');
-      print('  예약 시간: ${scheduleTime.toString()}');
-
-      int scheduledCount = 0;
-
-      for (final ingredient in ingredients) {
-        final expiryDate = ingredient.expiryDate;
-        final daysUntilExpiry = expiryDate.difference(now).inDays;
-
-        // 유통기한이 3일 이내인 재료만 알림
-        if (daysUntilExpiry <= settings.daysBefore) {
-          String title;
-          String body;
-
-          if (daysUntilExpiry <= 0) {
-            title = '🚨 유통기한 초과!';
-            body =
-                '${ingredient.name}의 유통기한이 ${daysUntilExpiry == 0 ? '오늘까지' : '${-daysUntilExpiry}일 지남'}입니다!';
-          } else {
-            title = '⚠️ 유통기한 임박!';
-            body = '${ingredient.name}의 유통기한이 ${daysUntilExpiry}일 남았습니다!';
-          }
-
-          notificationService.scheduleNotification(
-            id: ingredient.id.hashCode,
-            title: title,
-            body: body,
-            scheduledDate: scheduleTime,
-          );
-          scheduledCount++;
+      // AndroidAlarmManager로 매일 9시에 알림 예약
+      final alarmId = 0; // 고정 ID 사용
+      AndroidAlarmManager.oneShotAt(
+        scheduleTime,
+        alarmId,
+        _alarmCallback,
+        exact: true,
+        wakeup: true,
+        rescheduleOnReboot: true,
+      ).then((success) {
+        if (success) {
+          print('✅ AndroidAlarmManager 예약 성공: ${scheduleTime.toString()}');
+          print('  - 총 재료: ${ingredients.length}개');
+        } else {
+          print('❌ AndroidAlarmManager 예약 실패');
         }
-      }
+      });
 
       print('🔔 알림 스케줄링 완료!');
-      print('  - 총 예약: $scheduledCount개');
-      print('  - 총 예약: $scheduledCount개');
     } else {
-      print('🔕 알림이 비활성화되어 있습니다.');
+      print('🔕 알림이 비활성화되어 있거나 Android가 아닙니다.');
     }
   } else {
     print('⏳ 알림 스케줄러 대기 중...');

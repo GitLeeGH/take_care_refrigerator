@@ -149,16 +149,26 @@ class NotificationService {
   }) async {
     try {
       final now = DateTime.now();
-      final durationUntilScheduled = scheduledDate.difference(now);
+      final prefs = await SharedPreferences.getInstance();
+      final lastNotificationDate = prefs.getString('last_notification_$id');
 
       print(
         '⏰ 알림 예약: ID=$id, 제목="$title", 예약시간="${scheduledDate.toString()}", 현재시간="${now.toString()}"',
       );
-      print('⏳ 남은 시간: ${durationUntilScheduled.inSeconds}초');
 
-      // 예약 시간이 과거인 경우 스킵
-      if (durationUntilScheduled.isNegative) {
-        print('⚠️ 과거 시간으로 스케줄됨 - 즉시 표시합니다');
+      // 오늘 날짜 문자열 (yyyy-MM-dd)
+      final todayString =
+          '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+
+      // 이미 오늘 알림을 보냈는지 확인
+      if (lastNotificationDate == todayString) {
+        print('✅ 오늘 이미 알림 전송됨: $title (마지막 전송: $lastNotificationDate)');
+        return;
+      }
+
+      // 예약 시간이 과거면 즉시 알림 표시
+      if (now.isAfter(scheduledDate)) {
+        print('📨 즉시 알림 표시 (과거 시간): $title');
         await flutterLocalNotificationsPlugin.show(
           id,
           title,
@@ -182,9 +192,14 @@ class NotificationService {
             ),
           ),
         );
+
+        // 알림 전송 완료 기록
+        await prefs.setString('last_notification_$id', todayString);
+        print('✅ 알림 전송 완료: $title');
       } else {
-        // Timer를 사용하여 정확한 시간에 알림 표시
-        print('⏱️ Timer를 사용하여 정확한 시간에 예약');
+        // 아직 예약 시간이 안 됨 - Timer 사용
+        final durationUntilScheduled = scheduledDate.difference(now);
+        print('⏳ 남은 시간: ${durationUntilScheduled.inSeconds}초 후 알림 예약');
 
         Timer(durationUntilScheduled, () async {
           print('🔔 Timer 실행됨: $title');
@@ -211,6 +226,11 @@ class NotificationService {
               ),
             ),
           );
+
+          // 알림 전송 완료 기록
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('last_notification_$id', todayString);
+          print('✅ 알림 전송 완료: $title');
         });
 
         print('✅ 알림 예약 성공: $title (${scheduledDate.toString()})');
