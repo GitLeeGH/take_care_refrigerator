@@ -18,23 +18,24 @@ void _alarmCallback() async {
   print('🔔 백그라운드 알람 콜백 실행됨!');
   final notificationService = NotificationService();
   await notificationService.init();
-  
+
   final prefs = await SharedPreferences.getInstance();
   final now = DateTime.now();
-  final todayString = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+  final todayString =
+      '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
   final lastAlarmDate = prefs.getString('last_alarm_date');
-  
+
   // 오늘 이미 알림을 보냈으면 스킵
   if (lastAlarmDate == todayString) {
     print('✅ 오늘 이미 알림 전송됨');
     return;
   }
-  
+
   // 테스트 알림 표시
   await notificationService.showImmediateExpiryAlert('유통기한 확인', 0);
   await prefs.setString('last_alarm_date', todayString);
   print('✅ 백그라운드 알림 전송 완료');
-  
+
   // 내일 9시에 다시 예약
   final tomorrow9AM = DateTime(now.year, now.month, now.day + 1, 9, 0, 0);
   await AndroidAlarmManager.oneShotAt(
