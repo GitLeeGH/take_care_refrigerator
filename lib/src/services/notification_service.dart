@@ -25,7 +25,7 @@ class NotificationService {
 
   bool get isInitialized => _initialized;
 
-  Future<void> init() async {
+  Future<void> init({bool requestPermissions = true}) async {
     // 이미 초기화되었으면 스킵
     if (_initialized) {
       print('✅ NotificationService는 이미 초기화됨 (스킵)');
@@ -65,7 +65,7 @@ class NotificationService {
       print('✅ Android 알림 채널 생성 완료');
 
       // 권한 요청 (한 번만)
-      await _requestPermissionsOnce();
+      if (requestPermissions) await _requestPermissionsOnce();
 
       _initialized = true;
       print('📱 NotificationService 초기화 완료!');

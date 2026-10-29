@@ -9,6 +9,7 @@ import 'package:take_care_refrigerator/src/models.dart';
 
 import '../providers.dart';
 import '../theme.dart';
+import '../services/recipe_draft.dart';
 
 class AddRecipePage extends ConsumerStatefulWidget {
   final Recipe? recipe;
@@ -64,15 +65,7 @@ class _AddRecipePageState extends ConsumerState<AddRecipePage> {
   }
 
   String? _extractYoutubeId(String url) {
-    if (url.isEmpty) return null;
-    if (!url.contains("youtube.com/") && !url.contains("youtu.be/")) return null;
-    try {
-      final uri = Uri.parse(url);
-      if (url.contains("youtu.be")) return uri.pathSegments.first;
-      return uri.queryParameters['v'];
-    } catch (e) {
-      return null;
-    }
+    return YoutubeSource.parse(url)?.videoId;
   }
 
   Future<String?> _uploadImage(XFile image) async {

@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 
 import 'models.dart';
+import 'ingredient_matching.dart';
 import 'services/notification_service.dart';
 
 // 백그라운드에서 실행될 알림 콜백 (최상위 함수여야 함)
@@ -232,7 +233,7 @@ class SearchQueryNotifier extends Notifier<String> {
 
 class RecipeSortNotifier extends Notifier<RecipeSortType> {
   @override
-  RecipeSortType build() => RecipeSortType.recommended;
+  RecipeSortType build() => RecipeSortType.recent;
 
   void update(RecipeSortType sort) => state = sort;
 }
@@ -258,15 +259,15 @@ final canMakeFilterProvider = NotifierProvider<CanMakeFilterNotifier, bool>(
 
 // --- Data Fetching Providers for Recipe IDs ---
 
-// 1. Recommended Sort (uses the new RPC function)
+// 1. Recommended sort: rank by distinct owned ingredient names.
 final recommendedIdsProvider = FutureProvider.autoDispose<List<String>>((
   ref,
 ) async {
   final supabase = ref.watch(supabaseProvider);
   final ingredientsAsync = ref.watch(ingredientsProvider);
 
-  // Don't block; if ingredients are loading/error, proceed with an empty list for now.
-  // The provider will re-run when ingredients are available.
+  // Recompute when inventory is available; do not use stale data on errors.
+  if (ingredientsAsync.isLoading || ingredientsAsync.hasError) return [];
   final ingredients = ingredientsAsync.asData?.value ?? [];
   final ingredientNames = ingredients.map((e) => e.name).toList();
 
@@ -284,52 +285,18 @@ final recommendedIdsProvider = FutureProvider.autoDispose<List<String>>((
               (data as List).map((item) => Recipe.fromJson(item)).toList(),
         );
 
-    // Helper function for fuzzy ingredient matching
-    bool ingredientMatches(String recipeIng, String userIng) {
-      final recipeWords = recipeIng.toLowerCase().split(RegExp(r'[\s,\-()]+'));
-      final userWords = userIng.toLowerCase().split(RegExp(r'[\s,\-()]+'));
-
-      // Check if any word from recipe ingredient matches any word from user ingredient
-      return recipeWords.any(
-        (rWord) => userWords.any((uWord) {
-          if (uWord.isEmpty || rWord.isEmpty) return false;
-          // Require at least 3 characters to match, or exact word match
-          if (uWord.length >= 3 && rWord.length >= 3) {
-            return rWord.startsWith(uWord) || uWord.startsWith(rWord);
-          }
-          return rWord == uWord;
-        }),
-      );
-    }
-
-    // Step 2: Filter recipes that contain at least one ingredient from user's ingredients
-    final filteredRecipes = allRecipes.where((recipe) {
-      final hasAnyIngredient = recipe.requiredIngredients.any(
-        (recipeIng) => ingredientNames.any(
-          (userIng) => ingredientMatches(recipeIng, userIng),
-        ),
-      );
-      return hasAnyIngredient;
-    }).toList();
-
-    // Step 3: Sort by how many ingredients the user has (descending)
-    filteredRecipes.sort((a, b) {
-      int countA = a.requiredIngredients
-          .where(
-            (recipeIng) => ingredientNames.any(
-              (userIng) => ingredientMatches(recipeIng, userIng),
-            ),
-          )
-          .length;
-      int countB = b.requiredIngredients
-          .where(
-            (recipeIng) => ingredientNames.any(
-              (userIng) => ingredientMatches(recipeIng, userIng),
-            ),
-          )
-          .length;
-      return countB.compareTo(countA); // Descending order
-    });
+    final availability = {
+      for (final recipe in allRecipes)
+        recipe.id: RecommendedRecipe.fromInventory(recipe, ingredientNames),
+    };
+    final filteredRecipes = allRecipes
+        .where((recipe) => availability[recipe.id]!.ownedIngredientsCount > 0)
+        .toList();
+    filteredRecipes.sort(
+      (a, b) => availability[b.id]!.ownedIngredientsCount.compareTo(
+        availability[a.id]!.ownedIngredientsCount,
+      ),
+    );
 
     final result = filteredRecipes.map((r) => r.id).toList();
     return result;
@@ -583,24 +550,21 @@ final expiringIngredientsRecipesProvider = Provider.autoDispose<List<Recipe>>((
       .map((e) => e.name)
       .toSet();
 
-  // Find recipes that use at least one of the expiring ingredients
-  final recommended = allRecipes.where((recipe) {
-    final required = recipe.requiredIngredients.toSet();
-    return required.intersection(expiringIngredientNames).isNotEmpty;
-  }).toList();
-
-  // Sort by the number of expiring ingredients used
-  recommended.sort((a, b) {
-    final aCount = a.requiredIngredients
-        .toSet()
-        .intersection(expiringIngredientNames)
-        .length;
-    final bCount = b.requiredIngredients
-        .toSet()
-        .intersection(expiringIngredientNames)
-        .length;
-    return bCount.compareTo(aCount);
-  });
+  final availability = {
+    for (final recipe in allRecipes)
+      recipe.id: IngredientAvailability(
+        recipe.requiredIngredients,
+        expiringIngredientNames,
+      ),
+  };
+  final recommended = allRecipes
+      .where((recipe) => availability[recipe.id]!.ownedIngredients.isNotEmpty)
+      .toList();
+  recommended.sort(
+    (a, b) => availability[b.id]!.ownedIngredients.length.compareTo(
+      availability[a.id]!.ownedIngredients.length,
+    ),
+  );
 
   return recommended;
 });
@@ -613,19 +577,25 @@ final filteredPaginatedRecipesProvider = Provider.autoDispose<List<Recipe>>((
   final searchQuery = ref.watch(searchQueryProvider);
   final sortType = ref.watch(recipeSortProvider);
   final canMakeOnly = ref.watch(canMakeFilterProvider);
-  final ingredients = ref.watch(ingredientsProvider).asData?.value ?? [];
+  final inventory = ref.watch(ingredientsProvider);
+  final ingredients = inventory.asData?.value ?? [];
   final myIngredientNames = ingredients.map((e) => e.name).toSet();
 
   var recipes = state.recipes;
 
   // Apply "Can Make Only" filter first
   if (canMakeOnly) {
-    recipes = recipes.where((recipe) {
-      final required = recipe.requiredIngredients.toSet();
-      return required.every(
-        (ingredient) => myIngredientNames.contains(ingredient),
-      );
-    }).toList();
+    recipes = recipes
+        .where(
+          (recipe) =>
+              !inventory.isLoading &&
+              !inventory.hasError &&
+              IngredientAvailability(
+                recipe.requiredIngredients,
+                myIngredientNames,
+              ).canMake,
+        )
+        .toList();
   }
 
   // Then, apply search query ONLY for the recommended sort, as others are pre-filtered.

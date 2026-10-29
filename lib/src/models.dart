@@ -1,4 +1,8 @@
+import 'ingredient_matching.dart';
+import 'services/original_video.dart';
+
 class Ingredient {
+  final String? imagePath;
   final String id;
   final String name;
   final String quantity;
@@ -7,6 +11,7 @@ class Ingredient {
   final DateTime createdAt;
 
   Ingredient({
+    this.imagePath,
     required this.id,
     required this.name,
     required this.quantity,
@@ -16,6 +21,7 @@ class Ingredient {
   });
 
   factory Ingredient.fromJson(Map<String, dynamic> json) => Ingredient(
+    imagePath: json['image_path'] as String?,
     id: json['id'],
     name: json['name'],
     quantity: json['quantity'],
@@ -26,6 +32,22 @@ class Ingredient {
 }
 
 class Recipe {
+  /// Existing saved evidence records explicitly distinguish unknown steps.
+  bool get hasUnverifiedSteps =>
+      description?.contains('[아직 확인되지 않은 정보]') == true ||
+      description?.contains('<!-- recipe-evidence:v1;steps=unverified -->') ==
+          true;
+
+  String get displayDescription => (description ?? '')
+      .replaceAll('<!-- recipe-evidence:v1;steps=unverified -->', '')
+      .trim();
+
+  OriginalVideo? get originalVideo =>
+      OriginalVideo.parse(
+        'https://www.youtube.com/watch?v=${youtubeVideoId ?? ''}',
+      ) ??
+      OriginalVideo.parse(blogUrl ?? '');
+
   final String id;
   final String name;
   final String? description;
@@ -34,6 +56,7 @@ class Recipe {
   final String? blogUrl;
   final String? totalTime;
   final String? cuisineType;
+  final Object? videoSegments;
   final List<String> requiredIngredients;
   final int likeCount;
   final DateTime createdAt;
@@ -47,6 +70,7 @@ class Recipe {
     this.blogUrl,
     this.totalTime,
     this.cuisineType,
+    this.videoSegments,
     required this.requiredIngredients,
     required this.likeCount,
     required this.createdAt,
@@ -61,6 +85,7 @@ class Recipe {
     blogUrl: json['blog_url'],
     totalTime: json['total_time'],
     cuisineType: json['cuisine_type'],
+    videoSegments: json['video_segments'],
     requiredIngredients: List<String>.from(json['required_ingredients'] ?? []),
     likeCount: json['like_count'] ?? 0,
     createdAt: DateTime.parse(json['created_at']),
@@ -73,6 +98,22 @@ class RecommendedRecipe {
   final int ownedIngredientsCount;
   final int requiredIngredientsCount;
   final List<String> missingIngredients;
+
+  factory RecommendedRecipe.fromInventory(
+    Recipe recipe,
+    Iterable<String> inventory,
+  ) {
+    final availability = IngredientAvailability(
+      recipe.requiredIngredients,
+      inventory,
+    );
+    return RecommendedRecipe(
+      recipe: recipe,
+      ownedIngredientsCount: availability.ownedIngredients.length,
+      requiredIngredientsCount: availability.requiredIngredients.length,
+      missingIngredients: availability.missingIngredients,
+    );
+  }
 
   RecommendedRecipe({
     required this.recipe,

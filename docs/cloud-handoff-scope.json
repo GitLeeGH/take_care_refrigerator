@@ -1,0 +1,52 @@
+{
+  "baseline": "c06b546eb0597c1651b097b59813902b734b1120",
+  "source_file_count": 221,
+  "compared_current_files": 216,
+  "excluded": [
+    {
+      "path": "android/app/release_cert.cer",
+      "reason": "certificate/signing material"
+    },
+    {
+      "path": "android/build/reports/problems/problems-report.html",
+      "reason": "build/cache/version-control data"
+    },
+    {
+      "path": "assets/images/error1.png",
+      "reason": "legacy screenshots; may contain local personal UI data; not referenced by filename in app"
+    },
+    {
+      "path": "assets/images/reg1.png",
+      "reason": "legacy screenshots; may contain local personal UI data; not referenced by filename in app"
+    },
+    {
+      "path": "assets/images/reg2.png",
+      "reason": "legacy screenshots; may contain local personal UI data; not referenced by filename in app"
+    },
+    {
+      "path": "assets/images/reg3.png",
+      "reason": "legacy screenshots; may contain local personal UI data; not referenced by filename in app"
+    }
+  ],
+  "archive_only_changes": [
+    {
+      "path": ".vscode/settings.json",
+      "reason": "machine-specific editor path removed"
+    },
+    {
+      "path": "android/app/build.gradle.kts",
+      "line": 61,
+      "reason": "public Kakao identifier replaced with placeholder"
+    },
+    {
+      "path": "ios/Runner/Info.plist",
+      "line": 70,
+      "reason": "public Kakao identifier replaced with placeholder"
+    },
+    {
+      "path": "lib/main.dart",
+      "line": 74,
+      "reason": "public Kakao identifier replaced with placeholder"
+    }
+  ]
+}

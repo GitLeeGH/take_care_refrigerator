@@ -2,15 +2,17 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
 
 import '../providers.dart';
 import '../models.dart';
+import '../ingredient_matching.dart';
 import '../theme.dart';
+import '../widgets/recipe_cover.dart';
 import 'add_recipe_page.dart';
+import 'recipe_import_page.dart';
+import 'recipe_detail_page.dart';
+export 'recipe_detail_page.dart' show RecipeDetailPage;
 
 class RecipesPage extends ConsumerStatefulWidget {
   const RecipesPage({super.key});
@@ -47,12 +49,21 @@ class _RecipesPageState extends ConsumerState<RecipesPage> {
     final filteredRecipes = ref.watch(filteredPaginatedRecipesProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: lightGray,
       appBar: AppBar(
         title: const RecipeSearchBar(),
-        backgroundColor: Colors.white,
+        backgroundColor: lightGray,
         elevation: 0,
         centerTitle: false,
+        actions: [
+          IconButton(
+            tooltip: '영상 레시피 미리보기',
+            icon: const Icon(Icons.video_library_outlined),
+            onPressed: () => Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const RecipeImportPage())),
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -147,16 +158,7 @@ class _RecipesPageState extends ConsumerState<RecipesPage> {
           );
         }
         final recipe = recipes[index];
-        // We need to create a RecommendedRecipe object to pass to the card
-        // This part is a bit of a hack because we don't have the recommendation details here
-        // A better solution would be to refactor RecipeCard to not require it.
-        final recommendedRecipe = RecommendedRecipe(
-          recipe: recipe,
-          ownedIngredientsCount: 0, // Placeholder
-          requiredIngredientsCount: recipe.requiredIngredients.length,
-          missingIngredients: [], // Placeholder
-        );
-        return RecipeCard(recommendedRecipe: recommendedRecipe);
+        return RecipeCard(recipe: recipe);
       },
     );
   }
@@ -191,10 +193,10 @@ class _RecipeSearchBarState extends ConsumerState<RecipeSearchBar> {
           });
         },
         decoration: InputDecoration(
-          hintText: '레시피 검색...',
+          hintText: '오늘은 무엇을 만들까요?',
           prefixIcon: const Icon(Icons.search, color: mediumGray),
           filled: true,
-          fillColor: const Color(0xFFF1F3F5),
+          fillColor: Colors.white,
           contentPadding: EdgeInsets.zero,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(24),
@@ -220,69 +222,45 @@ class SortOptions extends ConsumerWidget {
       '최신순': RecipeSortType.recent,
     };
 
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
-      color: Colors.white,
-      child: Row(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: sortOptions.entries.map((entry) {
-                  final isSelected = selectedSort == entry.value;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8.0),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (final entry in sortOptions.entries)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
                     child: ChoiceChip(
                       label: Text(entry.key),
-                      selected: isSelected,
+                      selected: selectedSort == entry.value,
+                      selectedColor: softGreen,
                       onSelected: (selected) {
                         if (selected) {
                           ref
                               .read(recipeSortProvider.notifier)
                               .update(entry.value);
-                          // 정렬 변경 시 레시피 목록 provider 무효화
                           ref.invalidate(paginatedRecipesProvider);
                         }
                       },
-                      selectedColor: primaryBlue.withOpacity(0.2),
-                      labelStyle: TextStyle(
-                        color: isSelected ? primaryBlue : darkGray,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        side: BorderSide(
-                          color: isSelected ? primaryBlue : Colors.grey[300]!,
-                        ),
-                      ),
-                      backgroundColor: Colors.white,
                     ),
-                  );
-                }).toList(),
-              ),
+                  ),
+              ],
             ),
           ),
-          const VerticalDivider(width: 16, indent: 8, endIndent: 8),
-          Text(
-            '만들 수 있는 요리만',
-            style: TextStyle(
-              fontSize: 12,
-              color: canMakeOnly ? primaryBlue : mediumGray,
-              fontWeight: FontWeight.w600,
+          SwitchListTile.adaptive(
+            contentPadding: EdgeInsets.zero,
+            title: const Text(
+              '보유 재료로 만들 수 있는 요리',
+              style: TextStyle(fontSize: 14),
             ),
-          ),
-          const SizedBox(width: 4),
-          Switch(
             value: canMakeOnly,
             onChanged: (value) {
               ref.read(canMakeFilterProvider.notifier).update(value);
-              ref.invalidate(paginatedRecipesProvider);
             },
-            activeThumbColor: primaryBlue,
-            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            trackOutlineWidth: WidgetStateProperty.all(0),
           ),
         ],
       ),
@@ -291,27 +269,19 @@ class SortOptions extends ConsumerWidget {
 }
 
 class RecipeCard extends ConsumerWidget {
-  final RecommendedRecipe recommendedRecipe;
-  const RecipeCard({super.key, required this.recommendedRecipe});
+  final Recipe recipe;
+  const RecipeCard({super.key, required this.recipe, this.compact = false});
+  final bool compact;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final recipe = recommendedRecipe.recipe;
     final ingredients = ref.watch(ingredientsProvider);
-
-    // Calculate recommendation details on the fly for the card
-    final ownedIngredientsCount = ingredients.when(
-      data: (data) {
-        final myIngredientNames = data.map((e) => e.name).toSet();
-        return recipe.requiredIngredients
-            .where((req) => myIngredientNames.contains(req))
-            .length;
-      },
-      loading: () => 0,
-      error: (_, __) => 0,
+    final availability = IngredientAvailability(
+      recipe.requiredIngredients,
+      (ingredients.asData?.value ?? <Ingredient>[]).map((e) => e.name),
     );
-    final hasAllIngredients =
-        ownedIngredientsCount == recipe.requiredIngredients.length;
+    final inventoryReady = !ingredients.isLoading && !ingredients.hasError;
+    final hasAllIngredients = inventoryReady && availability.canMake;
 
     return GestureDetector(
       onTap: () => Navigator.push(
@@ -323,46 +293,24 @@ class RecipeCard extends ConsumerWidget {
       child: Card(
         margin: const EdgeInsets.only(bottom: 20),
         elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(compact ? 12 : 24),
+        ),
         clipBehavior: Clip.antiAlias,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SizedBox(
-              height: 220,
+              height: compact ? 132 : 180,
               width: double.infinity,
-              child: (recipe.imageUrl != null && recipe.imageUrl!.isNotEmpty)
-                  ? ClipRRect(
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(12),
-                      ),
-                      child: CachedNetworkImage(
-                        imageUrl: recipe.imageUrl!,
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => Shimmer.fromColors(
-                          baseColor: Colors.grey[300]!,
-                          highlightColor: Colors.grey[100]!,
-                          child: Container(color: Colors.white),
-                        ),
-                        errorWidget: (context, url, error) => const Center(
-                          child: Icon(
-                            Icons.ramen_dining_outlined,
-                            size: 60,
-                            color: mediumGray,
-                          ),
-                        ),
-                      ),
-                    )
-                  : const Center(
-                      child: Icon(
-                        Icons.ramen_dining_outlined,
-                        size: 60,
-                        color: mediumGray,
-                      ),
-                    ),
+              child: RecipeCover(
+                imageUrl: recipe.imageUrl,
+                video: recipe.originalVideo,
+                label: '${recipe.name} 이미지',
+              ),
             ),
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(compact ? 10 : 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -374,290 +322,51 @@ class RecipeCard extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    recipe.description ?? '',
-                    style: const TextStyle(color: mediumGray, fontSize: 14),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 12),
+                  if (recipe.originalVideo != null)
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 8),
+                      child: Text(
+                        '영상 레시피 · 원본 함께 보기',
+                        style: TextStyle(
+                          color: primaryGreen,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  if (!compact)
+                    Text(
+                      recipe.displayDescription,
+                      style: const TextStyle(color: mediumGray, fontSize: 14),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  SizedBox(height: compact ? 0 : 12),
                   Row(
                     children: [
                       Icon(
                         hasAllIngredients
                             ? Icons.check_circle
                             : Icons.error_outline,
-                        color: hasAllIngredients
-                            ? const Color(0xFF20C997)
-                            : Colors.amber,
+                        color: hasAllIngredients ? primaryGreen : warningInk,
                         size: 20,
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        '$ownedIngredientsCount / ${recipe.requiredIngredients.length} 재료 보유중',
-                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      Expanded(
+                        child: Text(
+                          ingredients.isLoading
+                              ? '재료 확인 중'
+                              : ingredients.hasError
+                              ? '재료 정보를 불러올 수 없습니다.'
+                              : '${availability.ownedIngredients.length} / ${availability.requiredIngredients.length} 재료 보유중',
+                          style: const TextStyle(fontWeight: FontWeight.w500),
+                        ),
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class RecipeDetailPage extends ConsumerStatefulWidget {
-  final Recipe recipe;
-  const RecipeDetailPage({super.key, required this.recipe});
-
-  @override
-  ConsumerState<RecipeDetailPage> createState() => _RecipeDetailPageState();
-}
-
-class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
-  Future<void> _launchURL(Uri url) async {
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-    } else {
-      // Could not launch the URL
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final recipe = widget.recipe;
-    final userProfile = ref.watch(userProfileProvider);
-    final likedIdsAsync = ref.watch(likedRecipeIdsProvider);
-    final ingredientsAsync = ref.watch(ingredientsProvider);
-
-    final hasYoutubeLink = recipe.youtubeVideoId?.isNotEmpty ?? false;
-    final hasBlogLink = recipe.blogUrl?.isNotEmpty ?? false;
-
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: Text(
-          recipe.name,
-          style: const TextStyle(color: darkGray, fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: darkGray),
-        actions: [
-          likedIdsAsync.when(
-            data: (likedIds) {
-              final isLiked = likedIds.contains(recipe.id);
-              return IconButton(
-                icon: Icon(
-                  isLiked ? Icons.favorite : Icons.favorite_border,
-                  color: isLiked ? Colors.redAccent : mediumGray,
-                ),
-                onPressed: () async {
-                  try {
-                    await ref.read(likeRecipeProvider)(recipe.id, isLiked);
-                  } catch (e) {
-                    // 오류 처리
-                  }
-                },
-              );
-            },
-            loading: () => const IconButton(
-              icon: Icon(Icons.favorite_border, color: mediumGray),
-              onPressed: null,
-            ),
-            error: (_, __) => const SizedBox.shrink(),
-          ),
-          userProfile.when(
-            data: (profile) {
-              if (profile?.role == 'admin') {
-                return IconButton(
-                  icon: const Icon(Icons.edit_outlined),
-                  onPressed: () {
-                    // We need to create a RecommendedRecipe object to pass to the edit page
-                    final recommendedRecipe = RecommendedRecipe(
-                      recipe: recipe,
-                      ownedIngredientsCount: 0, // Placeholder
-                      requiredIngredientsCount:
-                          recipe.requiredIngredients.length,
-                      missingIngredients: [], // Placeholder
-                    );
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => AddRecipePage(recipe: recipe),
-                      ),
-                    );
-                  },
-                );
-              }
-              return const SizedBox.shrink();
-            },
-            loading: () => const SizedBox.shrink(),
-            error: (e, s) => const SizedBox.shrink(),
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (recipe.imageUrl != null && recipe.imageUrl!.isNotEmpty)
-              GestureDetector(
-                onTap: () => hasYoutubeLink
-                    ? _launchURL(
-                        Uri.parse(
-                          'https://www.youtube.com/watch?v=${recipe.youtubeVideoId!}',
-                        ),
-                      )
-                    : null,
-                child: Container(
-                  height: 220,
-                  width: double.infinity,
-                  color: Colors.black,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      CachedNetworkImage(
-                        imageUrl: recipe.imageUrl!,
-                        width: double.infinity,
-                        height: double.infinity,
-                        fit: BoxFit.cover,
-                        color: hasYoutubeLink
-                            ? Colors.black.withOpacity(0.3)
-                            : null,
-                        colorBlendMode: hasYoutubeLink
-                            ? BlendMode.darken
-                            : null,
-                        placeholder: (context, url) => Shimmer.fromColors(
-                          baseColor: Colors.grey[800]!,
-                          highlightColor: Colors.grey[700]!,
-                          child: Container(color: Colors.black),
-                        ),
-                        errorWidget: (context, url, error) =>
-                            const SizedBox.shrink(),
-                      ),
-                      if (hasYoutubeLink)
-                        const Icon(
-                          Icons.play_circle_outline,
-                          color: Colors.white70,
-                          size: 70,
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    recipe.name,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  if (recipe.description != null &&
-                      recipe.description!.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
-                      child: MarkdownBody(data: recipe.description!),
-                    ),
-                  const SizedBox(height: 24),
-                  const Text(
-                    '필요한 재료',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 12),
-                  ingredientsAsync.when(
-                    data: (ingredients) {
-                      final myIngredientNames = ingredients
-                          .map((e) => e.name)
-                          .toSet();
-                      return Wrap(
-                        spacing: 8.0,
-                        runSpacing: 8.0,
-                        children: recipe.requiredIngredients.map((ing) {
-                          final isOwned = myIngredientNames.contains(ing);
-                          return Chip(
-                            avatar: Icon(
-                              isOwned
-                                  ? Icons.check_circle
-                                  : Icons.remove_circle_outline,
-                              color: isOwned
-                                  ? const Color(0xFF087F5B)
-                                  : const Color(0xFFC62828),
-                              size: 18,
-                            ),
-                            label: Text(ing),
-                            backgroundColor: isOwned
-                                ? const Color(0xFF20C997).withOpacity(0.1)
-                                : const Color(0xFFE57373).withOpacity(0.1),
-                            labelStyle: TextStyle(
-                              color: isOwned
-                                  ? const Color(0xFF087F5B)
-                                  : const Color(0xFFC62828),
-                              fontWeight: FontWeight.w500,
-                            ),
-                            side: BorderSide.none,
-                          );
-                        }).toList(),
-                      );
-                    },
-                    loading: () => const CircularProgressIndicator(),
-                    error: (_, __) => const Text('재료 정보를 불러올 수 없습니다.'),
-                  ),
-                  const SizedBox(height: 24),
-                  if (hasYoutubeLink)
-                    ElevatedButton.icon(
-                      onPressed: () => _launchURL(
-                        Uri.parse(
-                          'https://www.youtube.com/watch?v=${recipe.youtubeVideoId!}',
-                        ),
-                      ),
-                      icon: const Icon(Icons.play_arrow, color: Colors.white),
-                      label: const Text(
-                        '유튜브 영상 보러가기',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFF0000),
-                        minimumSize: const Size(double.infinity, 50),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  if (hasYoutubeLink && hasBlogLink) const SizedBox(height: 12),
-                  if (hasBlogLink)
-                    ElevatedButton.icon(
-                      onPressed: () => _launchURL(Uri.parse(recipe.blogUrl!)),
-                      icon: const Icon(
-                        Icons.article_outlined,
-                        color: Colors.white,
-                      ),
-                      label: const Text(
-                        '블로그 레시피 보기',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF20C997),
-                        minimumSize: const Size(double.infinity, 50),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
+                  if (inventoryReady && !compact) ...[
+                    const SizedBox(height: 8),
+                    Text(_ingredientSummary(availability)),
+                  ],
                 ],
               ),
             ),
@@ -676,12 +385,12 @@ class RecipeCardSkeleton extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 20),
       elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(height: 220, width: double.infinity, color: Colors.white),
+          Container(height: 180, width: double.infinity, color: Colors.white),
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -705,4 +414,10 @@ class RecipeCardSkeleton extends StatelessWidget {
       ),
     );
   }
+}
+
+String _ingredientSummary(IngredientAvailability availability) {
+  if (availability.requiredIngredients.isEmpty) return '등록된 재료 정보가 없습니다.';
+  if (availability.canMake) return '모든 재료 보유 · 수량은 직접 확인해 주세요.';
+  return '부족한 재료: ${availability.missingIngredients.join(', ')}';
 }
