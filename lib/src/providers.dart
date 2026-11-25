@@ -1,3 +1,16 @@
+import 'services/curation_preferences.dart';
+import 'services/notification_preferences.dart';
+import 'widgets/test_notification_card.dart';
+import 'services/verify_reservation.dart';
+import 'services/reminder_auth_boundary.dart';
+import 'services/one_shot_expiry_reminder.dart';
+import 'services/inventory_quantity.dart';
+import 'services/calendar_day.dart';
+import 'services/ingredient_stream.dart';
+import 'services/inventory_day.dart';
+import 'services/local_recipe_curation.dart';
+import 'services/meal_history.dart';
+import 'services/storage_reference.dart';
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -5,64 +18,43 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:io';
 
 import 'models.dart';
+import 'ingredient_matching.dart';
 import 'services/notification_service.dart';
 
 // 백그라운드에서 실행될 알림 콜백 (최상위 함수여야 함)
 @pragma('vm:entry-point')
-void _alarmCallback() async {
-  print('🔔 백그라운드 알람 콜백 실행됨!');
-  final notificationService = NotificationService();
-  await notificationService.init();
-
-  final prefs = await SharedPreferences.getInstance();
-  final now = DateTime.now();
-  final todayString =
-      '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-  final lastAlarmDate = prefs.getString('last_alarm_date');
-
-  // 오늘 이미 알림을 보냈으면 스킵
-  if (lastAlarmDate == todayString) {
-    print('✅ 오늘 이미 알림 전송됨');
-    return;
-  }
-
-  // 테스트 알림 표시
-  await notificationService.showImmediateExpiryAlert('유통기한 확인', 0);
-  await prefs.setString('last_alarm_date', todayString);
-  print('✅ 백그라운드 알림 전송 완료');
-
-  // 내일 9시에 다시 예약
-  final tomorrow9AM = DateTime(now.year, now.month, now.day + 1, 9, 0, 0);
-  await AndroidAlarmManager.oneShotAt(
-    tomorrow9AM,
-    0,
-    _alarmCallback,
-    exact: true,
-    wakeup: true,
-    rescheduleOnReboot: true,
-  );
-  print('✅ 내일 9시 알림 재예약 완료');
+void _alarmCallback() {
+  /* Legacy entry point: never emit or reschedule. */
 }
 
 // Simple in-memory notification settings model
+enum NotificationSettingsPersistence {
+  memoryOnly,
+  saved,
+  saving,
+  loadFailed,
+  writeFailed,
+}
+
 class NotificationSettings {
+  final NotificationSettingsPersistence persistenceStatus;
   final bool notificationsEnabled;
   final int daysBefore;
 
   NotificationSettings({
+    this.persistenceStatus = NotificationSettingsPersistence.memoryOnly,
     required this.notificationsEnabled,
     required this.daysBefore,
   });
 
   NotificationSettings copyWith({
+    NotificationSettingsPersistence? persistenceStatus,
     bool? notificationsEnabled,
     int? daysBefore,
   }) => NotificationSettings(
+    persistenceStatus: persistenceStatus ?? this.persistenceStatus,
     notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
     daysBefore: daysBefore ?? this.daysBefore,
   );
@@ -111,11 +103,12 @@ class NotificationListNotifier extends Notifier<List<NotificationItem>> {
   }
 
   void generateNotificationsFromIngredients(List<Ingredient> ingredients) {
-    final now = DateTime.now();
+    final now = ref.read(inventoryClockProvider)();
     final newNotifications = <NotificationItem>[];
 
     for (final ingredient in ingredients) {
-      final daysLeft = ingredient.expiryDate.difference(now).inDays;
+      if (isExplicitlyEmptyQuantity(ingredient.quantity)) continue;
+      final daysLeft = calendarDayDifference(ingredient.expiryDate, now);
 
       if (daysLeft <= 3) {
         final NotificationPriority priority;
@@ -124,7 +117,7 @@ class NotificationListNotifier extends Notifier<List<NotificationItem>> {
 
         if (daysLeft <= 0) {
           priority = NotificationPriority.urgent;
-          title = '🚨 유통기한 초과!';
+          title = daysLeft == 0 ? '오늘까지인 재료' : '🚨 유통기한 초과!';
           message = daysLeft == 0
               ? '${ingredient.name}의 유통기한이 오늘까지입니다'
               : '${ingredient.name}의 유통기한이 ${-daysLeft}일 지났습니다';
@@ -169,6 +162,29 @@ final supabaseProvider = Provider<SupabaseClient>(
   (ref) => Supabase.instance.client,
 );
 
+// Disabled until the additive remote migration and RLS checks are confirmed.
+final storageReferencesEnabledProvider = Provider<bool>(
+  (ref) => const bool.fromEnvironment(
+    'ENABLE_STORAGE_REFERENCES',
+    defaultValue: false,
+  ),
+);
+final storageReferenceGatewayProvider = Provider<StorageReferenceGateway>(
+  (ref) => SupabaseStorageReferenceGateway(ref.watch(supabaseProvider)),
+);
+final storedStorageReferencesProvider =
+    FutureProvider.autoDispose<List<StoredStorageReference>>((ref) async {
+      if (!ref.watch(storageReferencesEnabledProvider)) return [];
+      final client = ref.watch(supabaseProvider);
+      final uid = client.auth.currentUser?.id;
+      if (uid == null) return [];
+      final subscription = client.auth.onAuthStateChange.listen((_) {
+        if (client.auth.currentUser?.id != uid) ref.invalidateSelf();
+      });
+      ref.onDispose(subscription.cancel);
+      return ref.watch(storageReferenceGatewayProvider).read();
+    });
+
 final userProfileProvider = FutureProvider.autoDispose<UserProfile?>((
   ref,
 ) async {
@@ -195,26 +211,17 @@ final ingredientsProvider = StreamProvider.autoDispose<List<Ingredient>>((ref) {
   final user = supabase.auth.currentUser;
   if (user == null) return Stream.value([]);
 
-  final controller = StreamController<List<Ingredient>>();
-  final subscription = supabase
-      .from('ingredients')
-      .stream(primaryKey: ['id'])
-      .eq('user_id', user.id)
-      .order('expiry_date', ascending: true)
-      .listen((data) {
-        final ingredients = data
-            .map((item) => Ingredient.fromJson(item))
-            .toList();
-        controller.add(ingredients);
-      });
-
-  ref.onDispose(() {
-    subscription.cancel();
-    controller.close();
-  });
-
-  return controller.stream;
-});
+  // Keep errors visible until a new snapshot or an explicit user retry.
+  return accountIngredientStream(
+    supabase
+        .from('ingredients')
+        .stream(primaryKey: ['id'])
+        .eq('user_id', user.id)
+        .order('expiry_date', ascending: true),
+    user.id,
+    () => supabase.auth.currentUser?.id,
+  );
+}, retry: (_, _) => null);
 
 // =======================================================================
 // Recipe Sorting and Pagination Providers
@@ -232,7 +239,7 @@ class SearchQueryNotifier extends Notifier<String> {
 
 class RecipeSortNotifier extends Notifier<RecipeSortType> {
   @override
-  RecipeSortType build() => RecipeSortType.recommended;
+  RecipeSortType build() => RecipeSortType.recent;
 
   void update(RecipeSortType sort) => state = sort;
 }
@@ -256,87 +263,78 @@ final canMakeFilterProvider = NotifierProvider<CanMakeFilterNotifier, bool>(
   CanMakeFilterNotifier.new,
 );
 
+// One eligibility rule for recommendations, filters and displayed matches.
+final usableIngredientNamesProvider = Provider.autoDispose<List<String>>((ref) {
+  final inventory = ref.watch(ingredientsProvider);
+  if (inventory.isLoading || inventory.hasError) return [];
+  return usableInventoryNames(
+    inventory.asData?.value ?? [],
+    ref.watch(inventoryDayProvider),
+  );
+});
+
+final recipeMatchesFiltersProvider =
+    Provider.autoDispose<bool Function(Recipe)>((ref) {
+      final query = ref.watch(searchQueryProvider).toLowerCase();
+      final sort = ref.watch(recipeSortProvider);
+      final canMakeOnly = ref.watch(canMakeFilterProvider);
+      final names = ref.watch(usableIngredientNamesProvider);
+      return (recipe) =>
+          (sort == RecipeSortType.recommended || canMakeOnly
+              ? recipe.eligibleForRecommendation
+              : recipe.eligibleForBrowsing) &&
+          (!canMakeOnly ||
+              IngredientAvailability(
+                recipe.requiredIngredients,
+                names,
+              ).canMake) &&
+          (sort != RecipeSortType.recommended ||
+              query.isEmpty ||
+              recipe.name.toLowerCase().contains(query));
+    });
+
+// Injectable read-only boundary; pagination tests exercise the real notifier.
+final recipeDetailsLoaderProvider =
+    Provider<Future<List<Recipe>> Function(List<String>)>((ref) {
+      final client = ref.watch(supabaseProvider);
+      return (ids) async {
+        final response = await client
+            .from('recipes')
+            .select()
+            .filter('id', 'in', ids);
+        return (response as List).map((item) => Recipe.fromJson(item)).toList();
+      };
+    });
+
 // --- Data Fetching Providers for Recipe IDs ---
 
-// 1. Recommended Sort (uses the new RPC function)
+const recipeReadTimeout = Duration(seconds: 30);
+
+// 1. Shared pantry ranking with optional, account-scoped meal history.
 final recommendedIdsProvider = FutureProvider.autoDispose<List<String>>((
   ref,
 ) async {
-  final supabase = ref.watch(supabaseProvider);
-  final ingredientsAsync = ref.watch(ingredientsProvider);
-
-  // Don't block; if ingredients are loading/error, proceed with an empty list for now.
-  // The provider will re-run when ingredients are available.
-  final ingredients = ingredientsAsync.asData?.value ?? [];
-  final ingredientNames = ingredients.map((e) => e.name).toList();
-
-  if (ingredientNames.isEmpty) {
-    return [];
-  }
-
-  try {
-    // Step 1: Fetch all recipes
-    final allRecipes = await supabase
-        .from('recipes')
-        .select()
-        .then(
-          (data) =>
-              (data as List).map((item) => Recipe.fromJson(item)).toList(),
-        );
-
-    // Helper function for fuzzy ingredient matching
-    bool ingredientMatches(String recipeIng, String userIng) {
-      final recipeWords = recipeIng.toLowerCase().split(RegExp(r'[\s,\-()]+'));
-      final userWords = userIng.toLowerCase().split(RegExp(r'[\s,\-()]+'));
-
-      // Check if any word from recipe ingredient matches any word from user ingredient
-      return recipeWords.any(
-        (rWord) => userWords.any((uWord) {
-          if (uWord.isEmpty || rWord.isEmpty) return false;
-          // Require at least 3 characters to match, or exact word match
-          if (uWord.length >= 3 && rWord.length >= 3) {
-            return rWord.startsWith(uWord) || uWord.startsWith(rWord);
-          }
-          return rWord == uWord;
-        }),
-      );
-    }
-
-    // Step 2: Filter recipes that contain at least one ingredient from user's ingredients
-    final filteredRecipes = allRecipes.where((recipe) {
-      final hasAnyIngredient = recipe.requiredIngredients.any(
-        (recipeIng) => ingredientNames.any(
-          (userIng) => ingredientMatches(recipeIng, userIng),
-        ),
-      );
-      return hasAnyIngredient;
-    }).toList();
-
-    // Step 3: Sort by how many ingredients the user has (descending)
-    filteredRecipes.sort((a, b) {
-      int countA = a.requiredIngredients
-          .where(
-            (recipeIng) => ingredientNames.any(
-              (userIng) => ingredientMatches(recipeIng, userIng),
-            ),
-          )
-          .length;
-      int countB = b.requiredIngredients
-          .where(
-            (recipeIng) => ingredientNames.any(
-              (userIng) => ingredientMatches(recipeIng, userIng),
-            ),
-          )
-          .length;
-      return countB.compareTo(countA); // Descending order
-    });
-
-    final result = filteredRecipes.map((r) => r.id).toList();
-    return result;
-  } catch (e) {
-    return [];
-  }
-});
+  final preferencesFuture = ref.watch(activeCurationPreferencesProvider.future);
+  final inventory = ref.watch(ingredientsProvider);
+  if (inventory.isLoading || inventory.hasError) return [];
+  final now = ref.watch(inventoryDayProvider);
+  final ingredients = inventory.asData?.value ?? <Ingredient>[];
+  if (usableInventoryNames(ingredients, now).isEmpty) return [];
+  final history = ref.watch(mealRecommendationHistoryProvider);
+  // Reuse the read-only catalog; a history change must not fetch it again.
+  final recipes = await ref.watch(allRecipesListProvider.future);
+  final preferences = await preferencesFuture;
+  return curateLocalRecipes(
+    recipes: recipes,
+    inventory: ingredients,
+    now: now,
+    preferred: localPreferenceNames(preferences.preferred),
+    avoided: localPreferenceNames(preferences.avoided),
+    prioritizeExpiring: preferences.prioritizeExpiring,
+    mealOwner: history.owner,
+    meals: history.records,
+  ).map((match) => match.recipe.id).toList();
+}, retry: (_, _) => null);
 
 // 2. Popular Sort
 final popularIdsProvider = FutureProvider.autoDispose<List<String>>((
@@ -379,21 +377,29 @@ class PaginatedRecipesState {
     this.recipes = const [],
     this.isLoading = false,
     this.hasMore = true,
+    this.hasError = false,
+    this.scannedCount = 0,
   });
 
   final List<Recipe> recipes;
   final bool hasMore;
   final bool isLoading;
+  final bool hasError;
+  final int scannedCount;
 
   PaginatedRecipesState copyWith({
     List<Recipe>? recipes,
     bool? hasMore,
     bool? isLoading,
+    bool? hasError,
+    int? scannedCount,
   }) {
     return PaginatedRecipesState(
       recipes: recipes ?? this.recipes,
       hasMore: hasMore ?? this.hasMore,
       isLoading: isLoading ?? this.isLoading,
+      hasError: hasError ?? this.hasError,
+      scannedCount: scannedCount ?? this.scannedCount,
     );
   }
 }
@@ -401,117 +407,130 @@ class PaginatedRecipesState {
 // The Notifier
 class PaginatedRecipesNotifier extends Notifier<PaginatedRecipesState> {
   List<String> _sortedRecipeIds = [];
-  int _page = 0;
+  int _nextIndex = 0;
+  int _generation = 0;
   static const _pageSize = 10;
+  // One user action can scan at most 30 IDs in three sequential requests.
+  static const _maxPagesPerAction = 3;
 
   @override
   PaginatedRecipesState build() {
-    // 재료, 정렬 방식, 검색어, 필터가 변경되면 자동으로 재초기화
-    ref.watch(ingredientsProvider);
-    ref.watch(recipeSortProvider);
-    ref.watch(searchQueryProvider);
-    ref.watch(canMakeFilterProvider);
-
-    // 초기화 시 init 호출
-    WidgetsBinding.instance.addPostFrameCallback((_) => init());
+    final inventory = ref.watch(ingredientsProvider);
+    ref.watch(recipeMatchesFiltersProvider);
+    // Any dependency change invalidates pending reads before the next frame.
+    final generation = ++_generation;
+    ref.onDispose(() => _generation++);
+    final recommended =
+        ref.watch(recipeSortProvider) == RecipeSortType.recommended;
+    // Future identity changes when ranking inputs change, not on completion.
+    // Invalidate pagination for new history without a fetch loop.
+    if (recommended) ref.watch(recommendedIdsProvider.future);
+    final needsInventory = ref.watch(canMakeFilterProvider) || recommended;
+    if (inventory.isLoading && needsInventory) {
+      return const PaginatedRecipesState(isLoading: true);
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (ref.mounted && generation == _generation) init();
+    });
     return const PaginatedRecipesState();
   }
 
+  bool _current(int generation) => ref.mounted && generation == _generation;
+
   Future<void> init() async {
+    final generation = ++_generation;
+    _sortedRecipeIds = [];
+    _nextIndex = 0;
     state = const PaginatedRecipesState(isLoading: true);
     try {
-      final sortType = ref.read(recipeSortProvider);
-      debugPrint('[Recipes] Initializing with sort type: $sortType');
-
-      final idsFuture = switch (sortType) {
+      final sort = ref.read(recipeSortProvider);
+      if (sort == RecipeSortType.recommended ||
+          ref.read(canMakeFilterProvider)) {
+        if (ref.read(ingredientsProvider).isLoading) {
+          await ref.read(ingredientsProvider.future);
+          if (!_current(generation)) return;
+        }
+        if (ref.read(ingredientsProvider).hasError) {
+          state = const PaginatedRecipesState(hasMore: false, hasError: true);
+          return;
+        }
+      }
+      final ids = await (switch (sort) {
         RecipeSortType.recommended => ref.read(recommendedIdsProvider.future),
         RecipeSortType.popular => ref.read(popularIdsProvider.future),
         RecipeSortType.recent => ref.read(recentIdsProvider.future),
-      };
-
-      _sortedRecipeIds = await idsFuture;
-      debugPrint(
-        '[Recipes] Total sorted recipe IDs fetched: ${_sortedRecipeIds.length}',
-      );
-
-      _page = 0;
-      // Reset state, and critically, set isLoading to false before calling fetchNextPage
-      state = const PaginatedRecipesState(
-        recipes: [],
-        hasMore: true,
-        isLoading: false,
-      );
+      }).timeout(recipeReadTimeout);
+      if (!_current(generation)) return;
+      _sortedRecipeIds = List.of(ids);
+      state = PaginatedRecipesState(hasMore: ids.isNotEmpty);
       await fetchNextPage();
-    } catch (e, s) {
-      state = state.copyWith(isLoading: false, hasMore: false);
-      debugPrint('[Recipes] Error during init: $e\n$s');
+    } catch (_) {
+      if (!_current(generation)) return;
+      state = state.copyWith(isLoading: false, hasMore: false, hasError: true);
+    }
+  }
+
+  // A user refresh must invalidate IDs as well as fetch fresh detail rows.
+  Future<void> refresh() async {
+    ref.invalidate(recommendedIdsProvider);
+    ref.invalidate(popularIdsProvider);
+    ref.invalidate(recentIdsProvider);
+    ref.invalidate(allRecipesListProvider);
+    await init();
+  }
+
+  Future<void> retry() async {
+    if (state.isLoading) return;
+    if (_sortedRecipeIds.isEmpty) {
+      // A failed or timed-out FutureProvider may still retain its old future.
+      await refresh();
+    } else {
+      await fetchNextPage();
     }
   }
 
   Future<void> fetchNextPage() async {
     if (state.isLoading || !state.hasMore) return;
-
-    state = state.copyWith(isLoading: true);
-
+    final generation = _generation;
+    final matches = ref.read(recipeMatchesFiltersProvider);
+    state = state.copyWith(isLoading: true, hasError: false);
     try {
-      final from = _page * _pageSize;
-      debugPrint('[Recipes] Attempting to fetch page: $_page');
-
-      if (from >= _sortedRecipeIds.length) {
-        debugPrint('[Recipes] No more pages to fetch. Reached end of ID list.');
-        state = state.copyWith(isLoading: false, hasMore: false);
-        return;
-      }
-
-      final to = from + _pageSize - 1;
-      final idsToFetch = _sortedRecipeIds.sublist(
-        from,
-        to + 1 > _sortedRecipeIds.length ? _sortedRecipeIds.length : to + 1,
-      );
-
-      if (idsToFetch.isEmpty) {
-        debugPrint(
-          '[Recipes] No IDs to fetch for page $_page. Setting hasMore to false.',
+      final load = ref.read(recipeDetailsLoaderProvider);
+      var requests = 0;
+      while (_nextIndex < _sortedRecipeIds.length &&
+          requests < _maxPagesPerAction) {
+        requests++;
+        final end = (_nextIndex + _pageSize).clamp(0, _sortedRecipeIds.length);
+        final ids = _sortedRecipeIds.sublist(_nextIndex, end);
+        final rows = await load(ids).timeout(recipeReadTimeout);
+        if (!_current(generation)) return;
+        final byId = {for (final recipe in rows) recipe.id: recipe};
+        final ordered = [
+          for (final id in ids)
+            if (byId[id] != null) byId[id]!,
+        ];
+        _nextIndex = end;
+        state = state.copyWith(
+          recipes: [...state.recipes, ...ordered],
+          // Missing/deleted detail rows do not consume the remaining ID pages.
+          hasMore: _nextIndex < _sortedRecipeIds.length,
+          scannedCount: _nextIndex,
         );
-        state = state.copyWith(isLoading: false, hasMore: false);
-        return;
+        // A filtered-out or entirely missing page must not strand the user.
+        if (ordered.any(matches) || !state.hasMore) break;
       }
-
-      debugPrint('[Recipes] Fetching page $_page with IDs: $idsToFetch');
-
-      final response = await ref
-          .read(supabaseProvider)
-          .from('recipes')
-          .select()
-          .filter('id', 'in', idsToFetch);
-
-      final newRecipes = (response as List)
-          .map((item) => Recipe.fromJson(item))
-          .toList();
-      debugPrint(
-        '[Recipes] Fetched ${newRecipes.length} recipe details for page $_page',
-      );
-
-      // Preserve the sorted order from the ID list
-      final orderedNewRecipes = idsToFetch
-          .map(
-            (id) => newRecipes.firstWhere(
-              (recipe) => recipe.id == id,
-              orElse: () => Recipe.fromJson({}),
-            ),
-          )
-          .where((r) => r.id.isNotEmpty)
-          .toList();
-
       state = state.copyWith(
-        recipes: [...state.recipes, ...orderedNewRecipes],
-        hasMore: newRecipes.length >= _pageSize,
         isLoading: false,
+        hasMore: _nextIndex < _sortedRecipeIds.length,
       );
-      _page++;
-    } catch (e, s) {
-      state = state.copyWith(isLoading: false, hasMore: false);
-      debugPrint('[Recipes] Error during fetchNextPage: $e\n$s');
+    } catch (_) {
+      if (!_current(generation)) return;
+      // Retry the failed slice, preserving completed scans and visible cards.
+      state = state.copyWith(
+        isLoading: false,
+        hasMore: _nextIndex < _sortedRecipeIds.length,
+        hasError: true,
+      );
     }
   }
 }
@@ -523,28 +542,20 @@ final paginatedRecipesProvider =
       PaginatedRecipesState
     >(PaginatedRecipesNotifier.new);
 
-// Provider to fetch shelf life data from Supabase
-final shelfLifeDataProvider = FutureProvider.autoDispose<Map<String, int>>((
-  ref,
-) async {
-  final supabase = ref.watch(supabaseProvider);
-  final response = await supabase.from('shelf_life_data').select('name, days');
-
-  final Map<String, int> shelfLifeMap = {
-    for (var item in response) item['name'] as String: item['days'] as int,
-  };
-
-  return shelfLifeMap;
-});
+// Legacy shelf_life_data.days has no provenance or storage conditions.
+// Do not expose it as an expiry/default-date provider.
 
 // Provider to get all recipes at once, for features that need the full list.
 final allRecipesListProvider = FutureProvider.autoDispose<List<Recipe>>((
   ref,
 ) async {
   final supabase = ref.watch(supabaseProvider);
-  final response = await supabase.from('recipes').select();
+  final response = await supabase
+      .from('recipes')
+      .select()
+      .timeout(recipeReadTimeout);
   return (response as List).map((item) => Recipe.fromJson(item)).toList();
-});
+}, retry: (_, _) => null);
 
 // Provider for recommending recipes based on expiring ingredients
 final expiringIngredientsRecipesProvider = Provider.autoDispose<List<Recipe>>((
@@ -564,45 +575,24 @@ final expiringIngredientsRecipesProvider = Provider.autoDispose<List<Recipe>>((
   final ingredients = ingredientsValue.asData!.value;
   final allRecipes = allRecipesValue.asData!.value;
 
-  // Find ingredients expiring within 3 days
-  final expiringIngredients = ingredients
-      .where(
-        (i) =>
-            !i.expiryDate.isBefore(
-              DateTime.now(),
-            ) && // Filter out already expired
-            i.expiryDate.difference(DateTime.now()).inDays < 3,
-      )
-      .toList();
-
-  if (expiringIngredients.isEmpty) {
-    return [];
-  }
-
-  final expiringIngredientNames = expiringIngredients
-      .map((e) => e.name)
-      .toSet();
-
-  // Find recipes that use at least one of the expiring ingredients
-  final recommended = allRecipes.where((recipe) {
-    final required = recipe.requiredIngredients.toSet();
-    return required.intersection(expiringIngredientNames).isNotEmpty;
-  }).toList();
-
-  // Sort by the number of expiring ingredients used
-  recommended.sort((a, b) {
-    final aCount = a.requiredIngredients
-        .toSet()
-        .intersection(expiringIngredientNames)
-        .length;
-    final bCount = b.requiredIngredients
-        .toSet()
-        .intersection(expiringIngredientNames)
-        .length;
-    return bCount.compareTo(aCount);
-  });
-
-  return recommended;
+  final now = ref.watch(inventoryDayProvider);
+  if (expiringInventoryNames(ingredients, now).isEmpty) return [];
+  // Home still requires an actual expiring match, but ranks using the entire
+  // usable pantry. One expiring seasoning must not outrank a near-complete meal.
+  final matches = curateLocalRecipes(
+    recipes: allRecipes,
+    inventory: ingredients,
+    now: now,
+  ).where((match) => match.expiring.isNotEmpty).toList();
+  if (matches.isEmpty) return [];
+  final history = ref.watch(mealRecommendationHistoryProvider);
+  return curateLocalRecipes(
+    recipes: matches.map((match) => match.recipe),
+    inventory: ingredients,
+    now: now,
+    mealOwner: history.owner,
+    meals: history.records,
+  ).map((match) => match.recipe).toList();
 });
 
 // A final provider that applies the search query to the paginated list
@@ -610,32 +600,8 @@ final filteredPaginatedRecipesProvider = Provider.autoDispose<List<Recipe>>((
   ref,
 ) {
   final state = ref.watch(paginatedRecipesProvider);
-  final searchQuery = ref.watch(searchQueryProvider);
-  final sortType = ref.watch(recipeSortProvider);
-  final canMakeOnly = ref.watch(canMakeFilterProvider);
-  final ingredients = ref.watch(ingredientsProvider).asData?.value ?? [];
-  final myIngredientNames = ingredients.map((e) => e.name).toSet();
-
-  var recipes = state.recipes;
-
-  // Apply "Can Make Only" filter first
-  if (canMakeOnly) {
-    recipes = recipes.where((recipe) {
-      final required = recipe.requiredIngredients.toSet();
-      return required.every(
-        (ingredient) => myIngredientNames.contains(ingredient),
-      );
-    }).toList();
-  }
-
-  // Then, apply search query ONLY for the recommended sort, as others are pre-filtered.
-  if (searchQuery.isNotEmpty && sortType == RecipeSortType.recommended) {
-    recipes = recipes.where((r) {
-      return r.name.toLowerCase().contains(searchQuery.toLowerCase());
-    }).toList();
-  }
-
-  return recipes;
+  final matches = ref.watch(recipeMatchesFiltersProvider);
+  return state.recipes.where(matches).toList();
 });
 
 // =======================================================================
@@ -677,41 +643,29 @@ final likeRecipeProvider = Provider((ref) {
   final user = supabase.auth.currentUser;
 
   Future<void> toggleLike(String recipeId, bool isLiked) async {
-    print(
-      '[toggleLike] 함수 호출: recipeId=$recipeId, isLiked=$isLiked, userId=${user?.id}',
-    );
-
     if (user == null) {
-      print('[toggleLike] 사용자가 없습니다!');
       return;
     }
 
     try {
       if (isLiked) {
-        print('[toggleLike] 좋아요 삭제 중...');
         await supabase.from('recipe_likes').delete().match({
           'user_id': user.id,
           'recipe_id': recipeId,
         });
-        print('[toggleLike] 좋아요 삭제 완료');
       } else {
-        print('[toggleLike] 좋아요 추가 중...');
         await supabase.from('recipe_likes').insert({
           'user_id': user.id,
           'recipe_id': recipeId,
         });
-        print('[toggleLike] 좋아요 추가 완료');
       }
 
       // 좋아요 변경 후 모든 관련 provider 무효화
-      print('[toggleLike] Provider 무효화 중...');
       ref.invalidate(likedRecipeIdsProvider); // 좋아요한 레시피 ID 목록 갱신
       ref.invalidate(likedRecipesProvider); // 좋아요한 레시피 상세 정보 갱신
       ref.invalidate(popularIdsProvider); // 인기순 레시피 재조회
       ref.invalidate(paginatedRecipesProvider); // 페이지네이션 레시피 재조회
-      print('[toggleLike] Provider 무효화 완료!');
     } catch (e) {
-      print('[toggleLike] 데이터베이스 오류: $e');
       rethrow;
     }
   }
@@ -730,85 +684,166 @@ final notificationServiceProvider = FutureProvider<NotificationService>((
   return service;
 });
 
-final notificationSchedulerProvider = Provider.autoDispose((ref) {
-  // 스케줄러 비활성화: 동적 알림(generatedNotificationsProvider)만 사용
-  // 시스템 알림 중복 방지를 위해 초기 로그인 시에만 스케줄함
-  if (kIsWeb) return;
+final oneShotReminderProvider = Provider<OneShotExpiryReminder>(
+  (ref) => OneShotExpiryReminder.instance,
+);
 
-  // Depend on the service provider to ensure it's initialized
-  final notificationServiceAsync = ref.watch(notificationServiceProvider);
-  final ingredientsAsync = ref.watch(ingredientsProvider);
-  final settings = ref.watch(notificationSettingsProvider);
-
-  print('📲 알림 스케줄러 실행 중...');
-  print(
-    '  - NotificationService: ${notificationServiceAsync.hasValue ? '준비됨' : '대기중'}',
-  );
-  print(
-    '  - Ingredients: ${ingredientsAsync.hasValue ? '${ingredientsAsync.value?.length ?? 0}개' : '대기중'}',
-  );
-  print(
-    '  - Settings: 알림=${settings.notificationsEnabled ? '활성화' : '비활성화'}, D-${settings.daysBefore}',
-  );
-
-  // Only schedule notifications if all dependencies are ready
-  if (notificationServiceAsync.hasValue && ingredientsAsync.hasValue) {
-    final ingredients = ingredientsAsync.value!;
-
-    if (settings.notificationsEnabled && Platform.isAndroid) {
-      // 매일 아침 9시에만 알림 스케줄
-      final now = DateTime.now();
-
-      // 오전 9시
-      DateTime scheduleTime = DateTime(now.year, now.month, now.day, 9, 0, 0);
-
-      print('⏰ 알림 예약 시간 설정: $scheduleTime (현재: $now)');
-
-      // 만약 이미 설정 시간이 지났으면 내일 같은 시간으로 설정
-      if (now.isAfter(scheduleTime)) {
-        scheduleTime = scheduleTime.add(const Duration(days: 1));
-      }
-
-      // AndroidAlarmManager로 매일 9시에 알림 예약
-      final alarmId = 0; // 고정 ID 사용
-      AndroidAlarmManager.oneShotAt(
-        scheduleTime,
-        alarmId,
-        _alarmCallback,
-        exact: true,
-        wakeup: true,
-        rescheduleOnReboot: true,
-      ).then((success) {
-        if (success) {
-          print('✅ AndroidAlarmManager 예약 성공: ${scheduleTime.toString()}');
-          print('  - 총 재료: ${ingredients.length}개');
-        } else {
-          print('❌ AndroidAlarmManager 예약 실패');
-        }
-      });
-
-      print('🔔 알림 스케줄링 완료!');
-    } else {
-      print('🔕 알림이 비활성화되어 있거나 Android가 아닙니다.');
+final notificationCleanupProvider = Provider<Future<bool> Function()>(
+  (ref) => () async {
+    final reminder = ref.read(oneShotReminderProvider);
+    var ledgerCleared = true;
+    try {
+      await invalidateReminderSession(includeLocal: false);
+    } catch (_) {
+      ledgerCleared = false;
     }
-  } else {
-    print('⏳ 알림 스케줄러 대기 중...');
-    print(
-      '  - NotificationService: ${notificationServiceAsync.hasValue ? '준비됨' : '로딩중'}',
-    );
-    print('  - Ingredients: ${ingredientsAsync.hasValue ? '준비됨' : '로딩중'}');
-  }
+    await reminder.cancel(needsRebooking: true);
+    await explicitTestReminder.cancel();
+    final legacyCleared = await NotificationService()
+        .cancelLegacyNotifications();
+    return ledgerCleared && legacyCleared;
+  },
+);
+
+final notificationSchedulerProvider = Provider.autoDispose((ref) {
+  // Rebuilding an AsyncValue or refreshing an unchanged list is not a mutation.
+  // Initial process/auth cleanup happens separately, not on every stream emission.
+  ref.listen(notificationSettingsProvider, (previous, next) {
+    if (previous != null &&
+        (previous.notificationsEnabled != next.notificationsEnabled ||
+            previous.daysBefore != next.daysBefore)) {
+      ref.read(notificationCleanupProvider)();
+    }
+  });
+  ref.listen(ingredientsProvider, (previous, next) {
+    String? identity(AsyncValue<List<Ingredient>>? value) =>
+        value == null || value.isLoading || value.hasError || !value.hasValue
+        ? null
+        : reminderInventoryIdentity(value.value!);
+    final reminder = ref.read(oneShotReminderProvider);
+    if (reminder.recoveryPending && next.hasError) {
+      ref.read(notificationCleanupProvider)();
+    } else if (reminder.recoveryPending && identity(next) != null) {
+      final client = ref.read(supabaseProvider);
+      final owner = client.auth.currentUser?.id;
+      final captured = identity(next)!;
+      final settings = ref.read(notificationSettingsProvider);
+      var alive = true;
+      ref.onDispose(() => alive = false);
+      reminder.recover(
+        verify: () =>
+            verifyReservation(client, owner ?? '', settings.daysBefore),
+        stillValid: () =>
+            alive &&
+            client.auth.currentUser?.id == owner &&
+            owner != null &&
+            identity(ref.read(ingredientsProvider)) == captured &&
+            ref.read(notificationSettingsProvider).notificationsEnabled &&
+            settings.notificationsEnabled &&
+            ref.read(notificationSettingsProvider).daysBefore ==
+                settings.daysBefore,
+      );
+    } else if (identity(previous) != identity(next)) {
+      ref.read(notificationCleanupProvider)();
+    }
+  });
 });
 
+final notificationPreferencesStoreProvider =
+    Provider<NotificationPreferencesStore?>((ref) => null);
+final notificationPreferencesAccountProvider = Provider<String?>((ref) => null);
+
 class NotificationSettingsNotifier extends Notifier<NotificationSettings> {
+  int _revision = 0;
   @override
   NotificationSettings build() {
-    return NotificationSettings(notificationsEnabled: true, daysBefore: 3);
+    _revision++;
+    final store = ref.watch(notificationPreferencesStoreProvider);
+    final owner = ref.watch(notificationPreferencesAccountProvider);
+    return _load(store, owner);
   }
 
-  void toggleNotifications(bool enabled) =>
-      state = state.copyWith(notificationsEnabled: enabled);
-  void setDaysBefore(int days) => state = state.copyWith(daysBefore: days);
+  NotificationSettings _load(
+    NotificationPreferencesStore? store,
+    String? owner,
+  ) {
+    if (store == null || owner == null) {
+      return NotificationSettings(notificationsEnabled: true, daysBefore: 3);
+    }
+    try {
+      final value = store.load(owner);
+      return NotificationSettings(
+        notificationsEnabled: value.enabled,
+        daysBefore: value.daysBefore,
+        persistenceStatus: NotificationSettingsPersistence.saved,
+      );
+    } catch (_) {
+      // A failed load must not briefly enable reminders that the user disabled.
+      return NotificationSettings(
+        notificationsEnabled: false,
+        daysBefore: 3,
+        persistenceStatus: NotificationSettingsPersistence.loadFailed,
+      );
+    }
+  }
+
+  void toggleNotifications(bool enabled) {
+    state = state.copyWith(notificationsEnabled: enabled);
+    if (!enabled) ref.read(notificationCleanupProvider)();
+    unawaited(_persist());
+  }
+
+  void setDaysBefore(int days) {
+    if (!const {1, 3, 7}.contains(days))
+      throw ArgumentError.value(days, 'days');
+    state = state.copyWith(daysBefore: days);
+    unawaited(_persist());
+  }
+
+  Future<void> retryPersistence() async {
+    if (state.persistenceStatus == NotificationSettingsPersistence.loadFailed) {
+      _revision++;
+      final store = ref.read(notificationPreferencesStoreProvider);
+      final owner = ref.read(notificationPreferencesAccountProvider);
+      if (store != null && owner != null) store.forgetFailedLoad(owner);
+      state = _load(store, owner);
+      return;
+    }
+    await _persist();
+  }
+
+  Future<void> _persist() async {
+    final revision = ++_revision;
+    final store = ref.read(notificationPreferencesStoreProvider);
+    final owner = ref.read(notificationPreferencesAccountProvider);
+    if (store == null || owner == null) {
+      state = state.copyWith(
+        persistenceStatus: NotificationSettingsPersistence.memoryOnly,
+      );
+      return;
+    }
+    final value = InAppNotificationPreferences(
+      enabled: state.notificationsEnabled,
+      daysBefore: state.daysBefore,
+    );
+    state = state.copyWith(
+      persistenceStatus: NotificationSettingsPersistence.saving,
+    );
+    try {
+      await store.save(owner, value);
+      if (ref.mounted && revision == _revision) {
+        state = state.copyWith(
+          persistenceStatus: NotificationSettingsPersistence.saved,
+        );
+      }
+    } catch (_) {
+      if (ref.mounted && revision == _revision) {
+        state = state.copyWith(
+          persistenceStatus: NotificationSettingsPersistence.writeFailed,
+        );
+      }
+    }
+  }
 }
 
 final notificationSettingsProvider =
@@ -853,25 +888,29 @@ final generatedNotificationsProvider =
     Provider.autoDispose<List<NotificationItem>>((ref) {
       final ingredientsAsync = ref.watch(ingredientsProvider);
       final dismissedIds = ref.watch(dismissedNotificationsProvider);
-      final now = DateTime.now();
+      ref.watch(inventoryDayProvider);
+      final now = ref.watch(inventoryClockProvider)();
 
-      if (!ingredientsAsync.hasValue) {
+      final settings = ref.watch(notificationSettingsProvider);
+      if (!settings.notificationsEnabled ||
+          ingredientsAsync.isLoading ||
+          ingredientsAsync.hasError ||
+          !ingredientsAsync.hasValue) {
         return [];
       }
 
       final ingredients = ingredientsAsync.value!;
       final notifications = <NotificationItem>[];
 
-      print(
-        '[generatedNotificationsProvider] 알림 동적 생성: ${ingredients.length}개 재료 확인',
-      );
-
       for (final ingredient in ingredients) {
-        final daysLeft = ingredient.expiryDate.difference(now).inDays;
+        if (isExplicitlyEmptyQuantity(ingredient.quantity)) continue;
+        final daysLeft = calendarDayDifference(ingredient.expiryDate, now);
+        final noticeId =
+            'expiry:${ingredient.id}:${ingredient.expiryDate.year}-${ingredient.expiryDate.month}-${ingredient.expiryDate.day}:${now.year}-${now.month}-${now.day}';
 
-        if (daysLeft <= 3) {
+        if (daysLeft <= settings.daysBefore) {
           // 삭제된 알림이면 스킵
-          if (dismissedIds.contains(ingredient.id)) {
+          if (dismissedIds.contains(noticeId)) {
             continue;
           }
 
@@ -881,7 +920,7 @@ final generatedNotificationsProvider =
 
           if (daysLeft <= 0) {
             priority = NotificationPriority.urgent;
-            title = '🚨 유통기한 초과!';
+            title = daysLeft == 0 ? '오늘까지인 재료' : '🚨 유통기한 초과!';
             message = daysLeft == 0
                 ? '${ingredient.name}의 유통기한이 오늘까지입니다'
                 : '${ingredient.name}의 유통기한이 ${-daysLeft}일 지났습니다';
@@ -897,7 +936,7 @@ final generatedNotificationsProvider =
 
           notifications.add(
             NotificationItem(
-              id: ingredient.id,
+              id: noticeId,
               title: title,
               message: message,
               createdAt: now,
@@ -909,5 +948,44 @@ final generatedNotificationsProvider =
         }
       }
 
+      final references =
+          ref.watch(storedStorageReferencesProvider).asData?.value ??
+          const <StoredStorageReference>[];
+      if (settings.notificationsEnabled) {
+        final owned = {for (final item in ingredients) item.id: item};
+        for (final reference in references) {
+          final item = owned[reference.ingredientId];
+          if (item == null ||
+              isExplicitlyEmptyQuantity(item.quantity) ||
+              item.storageType != 'refrigerated' ||
+              !reference.active) {
+            continue;
+          }
+          final days = reference.daysLeft(now);
+          final noticeId =
+              '${reference.notificationId}:${now.year}-${now.month}-${now.day}';
+          if (days > settings.daysBefore || dismissedIds.contains(noticeId)) {
+            continue;
+          }
+          notifications.add(
+            NotificationItem(
+              id: noticeId,
+              title: '먼저 먹기 참고 알림',
+              message: reference.notificationBody(item.name),
+              createdAt: now,
+              ingredientId: item.id,
+              daysLeft: days,
+              priority: NotificationPriority.info,
+            ),
+          );
+        }
+      }
+
       return notifications;
     });
+
+// Read-only accessor, not a cached identity. Tests do not need an auth client.
+final currentSessionUserProvider = Provider<User? Function()>((ref) {
+  final client = ref.watch(supabaseProvider);
+  return () => client.auth.currentUser;
+});

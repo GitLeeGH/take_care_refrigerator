@@ -28,6 +28,11 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  image: 4.5.4
+  crypto: 3.0.6
+  http: 1.5.0
+  reminder_bridge:
+    path: packages/reminder_bridge
   flutter:
     sdk: flutter
 
@@ -40,6 +45,8 @@ dependencies:
   flutter_slidable: ^4.0.3
   flutter_dotenv: ^6.0.0
   url_launcher: ^6.3.1
+  webview_flutter: ^4.14.1
+  webview_flutter_android: 4.14.1
   flutter_markdown: ^0.7.1
   image_picker: ^1.1.2
   shared_preferences: ^2.2.3
@@ -87,7 +94,11 @@ flutter:
   # Include .env so flutter_dotenv can load it at runtime (required for web builds)
   assets:
     - .env
-    - assets/images/
+    - assets/images/app_icon.png
+    - assets/images/appicon.PNG
+    - assets/images/ingredients/
+    - assets/images/recipes/
+    - assets/images/recipe_examples/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

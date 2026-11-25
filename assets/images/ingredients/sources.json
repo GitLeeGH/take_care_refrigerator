@@ -1,0 +1,605 @@
+[
+  {
+    "id": "carrot",
+    "name": "당근",
+    "aliases": [
+      "carrot",
+      "carrots"
+    ],
+    "title": "Vegetable-Carrot-Bundle-wStalks.jpg",
+    "assetPath": "assets/images/ingredients/carrot.jpg",
+    "author": "Evan-Amos",
+    "license": "Public domain",
+    "licenseUrl": "",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Vegetable-Carrot-Bundle-wStalks.jpg",
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/a/a2/Vegetable-Carrot-Bundle-wStalks.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "downloadUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a2/Vegetable-Carrot-Bundle-wStalks.jpg/960px-Vegetable-Carrot-Bundle-wStalks.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "description": "A bundle of carrots with their stalks still attached. Bought from a farmers market in Brooklyn, from an independent farm.",
+    "modification": "Wikimedia-served thumbnail; displayed scaled or center-cropped, without AI generation or retouching.",
+    "retrievedOn": "2026-11-10",
+    "sha256": "a9df9bc9d8c941073bab60c1bf054d799b53f52e8a6428d1f98b9bd75e99fc49"
+  },
+  {
+    "id": "onion",
+    "name": "양파",
+    "aliases": [
+      "onion",
+      "onions"
+    ],
+    "title": "Onion on White.JPG",
+    "assetPath": "assets/images/ingredients/onion.jpg",
+    "author": "Colin",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Onion_on_White.JPG",
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/2/25/Onion_on_White.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "downloadUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/25/Onion_on_White.JPG/960px-Onion_on_White.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "description": "An onion on a white background.",
+    "modification": "Wikimedia-served thumbnail; displayed scaled or center-cropped, without AI generation or retouching.",
+    "retrievedOn": "2026-11-10",
+    "sha256": "827ca2553e1f99e5af8d3daf734ae8d21029cf6749ec9c4461f2f230212e69b5"
+  },
+  {
+    "id": "egg",
+    "name": "계란",
+    "aliases": [
+      "달걀",
+      "egg",
+      "eggs"
+    ],
+    "title": "6-Pack-Chicken-Eggs.jpg",
+    "assetPath": "assets/images/ingredients/egg.jpg",
+    "author": "Evan-Amos",
+    "license": "Public domain",
+    "licenseUrl": "",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:6-Pack-Chicken-Eggs.jpg",
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/1/12/6-Pack-Chicken-Eggs.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "downloadUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/12/6-Pack-Chicken-Eggs.jpg/960px-6-Pack-Chicken-Eggs.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "description": "A six pack of organic chicken eggs, from a New York CSA.  Included is a mix of white and brown eggs in a standard egg crate.",
+    "modification": "Wikimedia-served thumbnail; displayed scaled or center-cropped, without AI generation or retouching.",
+    "retrievedOn": "2026-11-10",
+    "sha256": "09b39905642bf85eff5133d76cae64eb82006e7c2d9a96a5d3699a72b386e7b8"
+  },
+  {
+    "id": "garlic",
+    "name": "마늘",
+    "aliases": [
+      "통마늘",
+      "깐마늘",
+      "garlic"
+    ],
+    "title": "Garlic bulbs and cloves.jpg",
+    "assetPath": "assets/images/ingredients/garlic.jpg",
+    "author": "Ivar Leidus",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Garlic_bulbs_and_cloves.jpg",
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/9/9a/Garlic_bulbs_and_cloves.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "downloadUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9a/Garlic_bulbs_and_cloves.jpg/960px-Garlic_bulbs_and_cloves.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "description": "Garlic bulbs and cloves",
+    "modification": "Wikimedia-served thumbnail; displayed scaled or center-cropped, without AI generation or retouching.",
+    "retrievedOn": "2026-11-10",
+    "sha256": "c0691547c7a5d39ade437f8e46d0ddcb92546cf14a6983c4061c74ddade80203"
+  },
+  {
+    "id": "tomato",
+    "name": "토마토",
+    "aliases": [
+      "tomato",
+      "tomatoes"
+    ],
+    "title": "Tomato je.jpg",
+    "assetPath": "assets/images/ingredients/tomato.jpg",
+    "author": "Softeis",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "http://creativecommons.org/licenses/by-sa/3.0/",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Tomato_je.jpg",
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/8/89/Tomato_je.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "downloadUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/89/Tomato_je.jpg/960px-Tomato_je.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "description": "Best Of Cheese Foods!\n\nTomato Burger\nTomato Pizza\nTomato Lasagna",
+    "modification": "Wikimedia-served thumbnail; displayed scaled or center-cropped, without AI generation or retouching.",
+    "retrievedOn": "2026-11-10",
+    "sha256": "687a7035409c220e828ac60215835aa8bf5f52bb8f86cd20033468106592f362"
+  },
+  {
+    "id": "cherry_tomato",
+    "name": "방울토마토",
+    "aliases": [
+      "cherry tomato",
+      "cherry tomatoes"
+    ],
+    "title": "Cherry-Tomatoes-in-Pack.jpg",
+    "assetPath": "assets/images/ingredients/cherry_tomato.jpg",
+    "author": "Evan-Amos",
+    "license": "CC0",
+    "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Cherry-Tomatoes-in-Pack.jpg",
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/3/39/Cherry-Tomatoes-in-Pack.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "downloadUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/39/Cherry-Tomatoes-in-Pack.jpg/960px-Cherry-Tomatoes-in-Pack.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "description": "A pulp basket of organic cherry tomatoes, from a local farm food co-op program.",
+    "modification": "Wikimedia-served thumbnail; displayed scaled or center-cropped, without AI generation or retouching.",
+    "retrievedOn": "2026-11-10",
+    "sha256": "13e7fe4debc9f3da30179e37a1e962b582350cf88924b782de36c737ba5edeef"
+  },
+  {
+    "id": "cucumber",
+    "name": "오이",
+    "aliases": [
+      "cucumber",
+      "cucumbers"
+    ],
+    "title": "CDC cuke2.jpg",
+    "assetPath": "assets/images/ingredients/cucumber.jpg",
+    "author": "U.S. Centers for Disease Control and Prevention (CDC)",
+    "license": "Public domain",
+    "licenseUrl": "",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:CDC_cuke2.jpg",
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/2/2f/CDC_cuke2.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "downloadUrl": "https://upload.wikimedia.org/wikipedia/commons/2/2f/CDC_cuke2.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+    "description": "",
+    "modification": "Wikimedia-served thumbnail; displayed scaled or center-cropped, without AI generation or retouching.",
+    "retrievedOn": "2026-11-10",
+    "sha256": "a7be369f0edc5428f7aeb41753fed0672bf00797a786097d6105aee4ac025bdc"
+  },
+  {
+    "id": "zucchini",
+    "name": "주키니",
+    "aliases": [
+      "주키니호박",
+      "zucchini"
+    ],
+    "title": "Zucchini-Whole.jpg",
+    "assetPath": "assets/images/ingredients/zucchini.jpg",
+    "author": "Evan-Amos",
+    "license": "Public domain",
+    "licenseUrl": "",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Zucchini-Whole.jpg",
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/7/7c/Zucchini-Whole.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "downloadUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7c/Zucchini-Whole.jpg/960px-Zucchini-Whole.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "description": "A zucchini vegetable shown whole.",
+    "modification": "Wikimedia-served thumbnail; displayed scaled or center-cropped, without AI generation or retouching.",
+    "retrievedOn": "2026-11-10",
+    "sha256": "062cf0496582f4d9a180ddce9f90a7bdee383ec3b5ea20a292ea965d78269e81"
+  },
+  {
+    "id": "cauliflower",
+    "name": "콜리플라워",
+    "aliases": [
+      "컬리플라워",
+      "cauliflower"
+    ],
+    "title": "Chou-fleur 02.jpg",
+    "assetPath": "assets/images/ingredients/cauliflower.jpg",
+    "author": "Coyau",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Chou-fleur_02.jpg",
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/2/2f/Chou-fleur_02.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "downloadUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2f/Chou-fleur_02.jpg/960px-Chou-fleur_02.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "description": "Brassica oleracea var. botrytis",
+    "modification": "Wikimedia-served thumbnail; displayed scaled or center-cropped, without AI generation or retouching.",
+    "retrievedOn": "2026-11-10",
+    "sha256": "dbbab1ce993c02c3c92afd75c82aa920eaefed17de55b0f4740119455bb1c8ac"
+  },
+  {
+    "id": "bell_pepper",
+    "name": "파프리카",
+    "aliases": [
+      "bell pepper",
+      "bell peppers"
+    ],
+    "title": "Green-Yellow-Red-Pepper-2009.jpg",
+    "assetPath": "assets/images/ingredients/bell_pepper.jpg",
+    "author": "Kham Tran - www.khamtran.com",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Green-Yellow-Red-Pepper-2009.jpg",
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/8/85/Green-Yellow-Red-Pepper-2009.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "downloadUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/85/Green-Yellow-Red-Pepper-2009.jpg/960px-Green-Yellow-Red-Pepper-2009.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "description": "Green, yellow and red bell peppers from the capsicum annuum plant.",
+    "modification": "Wikimedia-served thumbnail; displayed scaled or center-cropped, without AI generation or retouching.",
+    "retrievedOn": "2026-11-10",
+    "sha256": "9db32a84efa8d13299d835e3905d80519cabcbb618233f5c9f95c1403b27d6eb"
+  },
+  {
+    "id": "potato_chips",
+    "name": "감자칩",
+    "aliases": [
+      "포테이토칩",
+      "potato chips"
+    ],
+    "title": "Potato-Chips.jpg",
+    "assetPath": "assets/images/ingredients/potato_chips.jpg",
+    "author": "Evan-Amos",
+    "license": "Public domain",
+    "licenseUrl": "",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Potato-Chips.jpg",
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/6/69/Potato-Chips.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "downloadUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/69/Potato-Chips.jpg/960px-Potato-Chips.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "description": "A pile of potato chips.  These are Utz-brand, grandma's kettle-cooked style.",
+    "modification": "Wikimedia-served thumbnail; displayed scaled or center-cropped, without AI generation or retouching.",
+    "retrievedOn": "2026-11-10",
+    "sha256": "059935ac083b196dc74d0c8de7cc265807725aa9ac99990e2530687b62c8a514"
+  },
+  {
+    "id": "broccoli",
+    "name": "브로콜리",
+    "aliases": [
+      "broccoli"
+    ],
+    "title": "Broccolli 2.jpg",
+    "assetPath": "assets/images/ingredients/broccoli.jpg",
+    "author": "JJ Harrison (https://www.jjharrison.com.au/)",
+    "license": "CC BY-SA 2.5",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.5",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Broccolli_2.jpg",
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/c/c7/Broccolli_2.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "downloadUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c7/Broccolli_2.jpg/960px-Broccolli_2.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "description": "Brocolli, Unknown Cultivar\nCamera data\n\nCamera Canon EOS 400D\nLens Canon EF 70-200mm f4L w/ 12mm extension tube\nFlash Flashes rear left and front right\nFocal length 104 mm\nAperture f/11\nExposure time 1/200 s\nSensivity ISO 100",
+    "modification": "Wikimedia-served thumbnail; displayed scaled or center-cropped, without AI generation or retouching.",
+    "retrievedOn": "2026-11-10",
+    "sha256": "f77881a8f13a0332c96a090044c8602d6e229b8dec2c762d821789ef7db38b2c"
+  },
+  {
+    "id": "potato",
+    "name": "감자",
+    "aliases": [
+      "potato",
+      "potatoes"
+    ],
+    "title": "Potato cv Dejima (cropped).jpg",
+    "assetPath": "assets/images/ingredients/potato.jpg",
+    "author": "Fk",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Potato_cv_Dejima_(cropped).jpg",
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/6/6b/Potato_cv_Dejima_%28cropped%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "downloadUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6b/Potato_cv_Dejima_%28cropped%29.jpg/960px-Potato_cv_Dejima_%28cropped%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "description": "Japanese potato cultivar \"Dejima\"",
+    "modification": "Wikimedia-served thumbnail; displayed scaled or center-cropped, without AI generation or retouching.",
+    "retrievedOn": "2026-11-10",
+    "sha256": "f7bb203b2fab3cf53360d9d08e16b601324b5aa05ce4146d4e8e7e5d157916a5"
+  },
+  {
+    "id": "sweet_potato",
+    "name": "고구마",
+    "aliases": [
+      "sweet potato",
+      "sweet potatoes"
+    ],
+    "title": "5aday sweet potato.jpg",
+    "assetPath": "assets/images/ingredients/sweet_potato.jpg",
+    "author": "National Cancer Institute (5 A Day)",
+    "license": "Public domain",
+    "licenseUrl": "",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:5aday_sweet_potato.jpg",
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/3/38/5aday_sweet_potato.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "downloadUrl": "https://upload.wikimedia.org/wikipedia/commons/3/38/5aday_sweet_potato.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+    "description": "sweet potato National Cancer Institute's 5 A Day Resources & Tools.",
+    "modification": "Wikimedia-served thumbnail; displayed scaled or center-cropped, without AI generation or retouching.",
+    "retrievedOn": "2026-11-10",
+    "sha256": "13b686b48c750c51bc61763a7541b2f944496bb79c45fa5d6df03a3c19ff7fa7"
+  },
+  {
+    "id": "scallion",
+    "name": "대파",
+    "aliases": [
+      "scallion",
+      "scallions",
+      "green onion",
+      "green onions"
+    ],
+    "title": "Spring Onion.jpg",
+    "assetPath": "assets/images/ingredients/scallion.jpg",
+    "author": "Donovan Govan.",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "http://creativecommons.org/licenses/by-sa/3.0/",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Spring_Onion.jpg",
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/9/9c/Spring_Onion.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "downloadUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9c/Spring_Onion.jpg/960px-Spring_Onion.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "description": "This is a bunch of spring onions (also known as scallions or shallots).",
+    "modification": "Wikimedia-served thumbnail; displayed scaled or center-cropped, without AI generation or retouching.",
+    "retrievedOn": "2026-11-10",
+    "sha256": "f41274e4d41547a195309b8dcdd6b33091e463960037b50f050ea58c7505583c"
+  },
+  {
+    "id": "spinach",
+    "name": "시금치",
+    "aliases": [
+      "spinach"
+    ],
+    "title": "Spinach leaves.jpg",
+    "assetPath": "assets/images/ingredients/spinach.jpg",
+    "author": "Nillerdk",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Spinach_leaves.jpg",
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/f/fe/Spinach_leaves.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "downloadUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fe/Spinach_leaves.jpg/960px-Spinach_leaves.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "description": "1 kg of Spinach leaves separated from the stems. See Image:spinach_leaves_stems.jpg",
+    "modification": "Wikimedia-served thumbnail; displayed scaled or center-cropped, without AI generation or retouching.",
+    "retrievedOn": "2026-11-10",
+    "sha256": "e60bb9d2ab1a3adef6699137eb63f085c6f56c0037b43af838f68e180a9ef611"
+  },
+  {
+    "id": "eggplant",
+    "name": "가지",
+    "aliases": [
+      "eggplant",
+      "aubergine"
+    ],
+    "title": "Aubergine.jpg",
+    "assetPath": "assets/images/ingredients/eggplant.jpg",
+    "author": "Horst Frank",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "http://creativecommons.org/licenses/by-sa/3.0/",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Aubergine.jpg",
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/f/fb/Aubergine.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "downloadUrl": "https://upload.wikimedia.org/wikipedia/commons/f/fb/Aubergine.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+    "description": "Eggplant",
+    "modification": "Wikimedia-served thumbnail; displayed scaled or center-cropped, without AI generation or retouching.",
+    "retrievedOn": "2026-11-10",
+    "sha256": "e6e225abf2f6c8d822f3b3f1adb2437d3626170c2021e24e1c754633e032e8a1"
+  },
+  {
+    "id": "tofu",
+    "name": "두부",
+    "aliases": [
+      "tofu",
+      "firm tofu"
+    ],
+    "title": "Tofu 2.png",
+    "assetPath": "assets/images/ingredients/tofu.png",
+    "author": "Tiia Monto",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Tofu_2.png",
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/b/bf/Tofu_2.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "downloadUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/bf/Tofu_2.png/960px-Tofu_2.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "description": "Tofu, partially cut into four branches.",
+    "modification": "Wikimedia-served thumbnail; displayed scaled or center-cropped, without AI generation or retouching.",
+    "retrievedOn": "2026-11-10",
+    "sha256": "ec5f45ece88a5e53e4aa5be57a6f1f69d2a96e2524dd1023abeeb66e7d713947"
+  },
+  {
+    "id": "soft_tofu",
+    "name": "연두부",
+    "aliases": [
+      "silken tofu"
+    ],
+    "title": "Japanese SilkyTofu (Kinugoshi Tofu).JPG",
+    "assetPath": "assets/images/ingredients/soft_tofu.jpg",
+    "author": "DryPot",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "http://creativecommons.org/licenses/by-sa/3.0/",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Japanese_SilkyTofu_(Kinugoshi_Tofu).JPG",
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/0/03/Japanese_SilkyTofu_%28Kinugoshi_Tofu%29.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "downloadUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/03/Japanese_SilkyTofu_%28Kinugoshi_Tofu%29.JPG/960px-Japanese_SilkyTofu_%28Kinugoshi_Tofu%29.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "description": "Japanese SilkyTofu (Kinugoshi Tofu)",
+    "modification": "Wikimedia-served thumbnail; displayed scaled or center-cropped, without AI generation or retouching.",
+    "retrievedOn": "2026-11-10",
+    "sha256": "00751e7d981e6d338e8707d46279b02ed869e624e335a6325607f809fde28bd9"
+  },
+  {
+    "id": "enoki",
+    "name": "팽이버섯",
+    "aliases": [
+      "팽이",
+      "enoki",
+      "enoki mushroom",
+      "enoki mushrooms"
+    ],
+    "title": "EnokitakeJapaneseMushroom.jpg",
+    "assetPath": "assets/images/ingredients/enoki.jpg",
+    "author": "Chris 73",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:EnokitakeJapaneseMushroom.jpg",
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/1/18/EnokitakeJapaneseMushroom.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "downloadUrl": "https://upload.wikimedia.org/wikipedia/commons/1/18/EnokitakeJapaneseMushroom.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+    "description": "",
+    "modification": "Wikimedia-served thumbnail; displayed scaled or center-cropped, without AI generation or retouching.",
+    "retrievedOn": "2026-11-10",
+    "sha256": "f565c9fd54ecf18c6d8a90c8de00de60e77c798bafbf01bd20e4d2ccaff032a3"
+  },
+  {
+    "id": "soybean_sprouts",
+    "name": "콩나물",
+    "aliases": [
+      "soybean sprouts"
+    ],
+    "title": "Kongnamul (soybean sprout) 2.jpg",
+    "assetPath": "assets/images/ingredients/soybean_sprouts.jpg",
+    "author": "Hyeon-Jeong Suk",
+    "license": "CC BY 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Kongnamul_(soybean_sprout)_2.jpg",
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/4/4f/Kongnamul_%28soybean_sprout%29_2.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "downloadUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4f/Kongnamul_%28soybean_sprout%29_2.jpg/960px-Kongnamul_%28soybean_sprout%29_2.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "description": "Kongnamul (soybean sprout)",
+    "modification": "Wikimedia-served thumbnail; displayed scaled or center-cropped, without AI generation or retouching.",
+    "retrievedOn": "2026-11-10",
+    "sha256": "a95f66bec0b77b0ee0881a060956d8dd9173545a7fd2cf774561c3a56771f4fa"
+  },
+  {
+    "id": "mung_sprouts",
+    "name": "숙주",
+    "aliases": [
+      "숙주나물",
+      "mung bean sprouts"
+    ],
+    "title": "Mung bean sprouts 1.jpg",
+    "assetPath": "assets/images/ingredients/mung_sprouts.jpg",
+    "author": "chomjong",
+    "license": "CC BY 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Mung_bean_sprouts_1.jpg",
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/f/f9/Mung_bean_sprouts_1.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "downloadUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f9/Mung_bean_sprouts_1.jpg/960px-Mung_bean_sprouts_1.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "description": "Mung bean sprouts",
+    "modification": "Wikimedia-served thumbnail; displayed scaled or center-cropped, without AI generation or retouching.",
+    "retrievedOn": "2026-11-10",
+    "sha256": "83f596688190a1d4a1c44fd52de8eba180bbbf32a6a77fa3fac9f0d8c0bce713"
+  },
+  {
+    "id": "apple",
+    "name": "사과",
+    "aliases": [
+      "apple",
+      "apples"
+    ],
+    "title": "Wet apple isolated on white.jpg",
+    "assetPath": "assets/images/ingredients/apple.jpg",
+    "author": "robin_24",
+    "license": "CC BY 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Wet_apple_isolated_on_white.jpg",
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/e/eb/Wet_apple_isolated_on_white.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "downloadUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/eb/Wet_apple_isolated_on_white.jpg/960px-Wet_apple_isolated_on_white.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "description": "A wet red apple is isolated on white.",
+    "modification": "Wikimedia-served thumbnail; displayed scaled or center-cropped, without AI generation or retouching.",
+    "retrievedOn": "2026-11-10",
+    "sha256": "ff8506e319c35a7603814350dd6584cd9e2e4b8cafc7a05cd3cb2a44dd2f4cca"
+  },
+  {
+    "id": "milk",
+    "name": "우유",
+    "aliases": [
+      "milk"
+    ],
+    "title": "Milk glass.jpg",
+    "assetPath": "assets/images/ingredients/milk.jpg",
+    "author": "Stefan Kühn",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "http://creativecommons.org/licenses/by-sa/3.0/",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Milk_glass.jpg",
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/0/0e/Milk_glass.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "downloadUrl": "https://upload.wikimedia.org/wikipedia/commons/0/0e/Milk_glass.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+    "description": "A glass of milk",
+    "modification": "Wikimedia-served thumbnail; displayed scaled or center-cropped, without AI generation or retouching.",
+    "retrievedOn": "2026-11-10",
+    "sha256": "bc3e9601e8ebe974aead13f016eb9bf77dfd164dce302464671ce7dd48884d7d"
+  },
+  {
+    "id": "rice",
+    "name": "쌀",
+    "aliases": [
+      "백미",
+      "white rice"
+    ],
+    "title": "White rice.jpg",
+    "assetPath": "assets/images/ingredients/rice.jpg",
+    "author": "Lucy Gull",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:White_rice.jpg",
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/a/a3/White_rice.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "downloadUrl": "https://upload.wikimedia.org/wikipedia/commons/a/a3/White_rice.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+    "description": "white rice",
+    "modification": "Wikimedia-served thumbnail; displayed scaled or center-cropped, without AI generation or retouching.",
+    "retrievedOn": "2026-11-10",
+    "sha256": "9e184182690c615cd34546d0b1c1fbc87a4706692738a3fa81f686668c0719ff"
+  },
+  {
+    "id": "lettuce",
+    "name": "상추",
+    "aliases": [
+      "leaf lettuce"
+    ],
+    "title": "Hydroponic lettuce leaves green.jpg",
+    "assetPath": "assets/images/ingredients/lettuce.jpg",
+    "author": "Leon Brooks",
+    "license": "Public domain",
+    "licenseUrl": "",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Hydroponic_lettuce_leaves_green.jpg",
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/e/ec/Hydroponic_lettuce_leaves_green.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "downloadUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ec/Hydroponic_lettuce_leaves_green.jpg/960px-Hydroponic_lettuce_leaves_green.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "description": "\nImage title: Hydroponic lettuce leaves green\nImage from Public domain images website, http://www.public-domain-image.com/full-image/nature-landscapes-public-domain-images-pictures/leaf-leaves-public-domain-images-pictures/hydroponic-lettuce-leaves-green.jpg.html",
+    "modification": "Wikimedia-served thumbnail; displayed scaled or center-cropped, without AI generation or retouching.",
+    "retrievedOn": "2026-11-10",
+    "sha256": "117302de05dbd67199811576b5c5df0c3836fae6f6c7907a0f4bc776fd501315"
+  },
+  {
+    "id": "red_bell_pepper",
+    "name": "빨강 파프리카",
+    "aliases": [
+      "빨간 파프리카",
+      "홍파프리카",
+      "홍피망",
+      "red bell pepper"
+    ],
+    "title": "Red-Pepper.jpg",
+    "assetPath": "assets/images/ingredients/red_bell_pepper.jpg",
+    "author": "Evan-Amos",
+    "license": "CC0",
+    "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Red-Pepper.jpg",
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/8/87/Red-Pepper.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "downloadUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/87/Red-Pepper.jpg/960px-Red-Pepper.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "description": "A red pepper from an organic farm co-op.",
+    "modification": "Wikimedia-served thumbnail; displayed scaled or center-cropped, without AI generation or retouching.",
+    "retrievedOn": "2026-11-10",
+    "sha256": "362687b19ea0a3f5d8ff800f8cb1f4bd7ab68077f2082015bbb26ffd9c7e4a8e"
+  },
+  {
+    "id": "yellow_bell_pepper",
+    "name": "노랑 파프리카",
+    "aliases": [
+      "노란 파프리카",
+      "yellow bell pepper"
+    ],
+    "title": "Yellow bell pepper 2017 A1.jpg",
+    "assetPath": "assets/images/ingredients/yellow_bell_pepper.jpg",
+    "author": "Fructibus",
+    "license": "CC0",
+    "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Yellow_bell_pepper_2017_A1.jpg",
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/d/d5/Yellow_bell_pepper_2017_A1.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "downloadUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d5/Yellow_bell_pepper_2017_A1.jpg/960px-Yellow_bell_pepper_2017_A1.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "description": "Yellow bell pepper",
+    "modification": "Wikimedia-served thumbnail; displayed scaled or center-cropped, without AI generation or retouching.",
+    "retrievedOn": "2026-11-10",
+    "sha256": "e76c4d8416886ae8820eb2c7e60aca38464bb8331779c0591aeaf397d430c270"
+  },
+  {
+    "id": "button_mushroom",
+    "name": "양송이버섯",
+    "aliases": [
+      "양송이",
+      "button mushroom",
+      "button mushrooms"
+    ],
+    "title": "Champignons Agaricus.jpg",
+    "assetPath": "assets/images/ingredients/button_mushroom.jpg",
+    "author": "Darkone (talk · contribs)",
+    "license": "CC BY-SA 2.5",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.5",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Champignons_Agaricus.jpg",
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/f/ff/Champignons_Agaricus.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "downloadUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/ff/Champignons_Agaricus.jpg/960px-Champignons_Agaricus.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "description": "Beschreibung: Zuchtchampignon (Agaricus bisporus)\nFotograf: Darkone, 8. September 2004",
+    "modification": "Wikimedia-served thumbnail; displayed scaled or center-cropped, without AI generation or retouching.",
+    "retrievedOn": "2026-11-10",
+    "sha256": "210b5e04552cc9cc69f5440f3ed5d89df6c3a2f675d55e40d1b8a11eca05a7cb"
+  },
+  {
+    "id": "aehobak",
+    "name": "애호박",
+    "aliases": [
+      "aehobak",
+      "korean zucchini"
+    ],
+    "title": "Aehobak (cropped).jpg",
+    "assetPath": "assets/images/ingredients/aehobak.jpg",
+    "author": "산체",
+    "license": "CC BY-SA 2.5",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.5",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Aehobak_(cropped).jpg",
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/4/46/Aehobak_%28cropped%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "downloadUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/46/Aehobak_%28cropped%29.jpg/960px-Aehobak_%28cropped%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "description": "aehobak after rain",
+    "modification": "Wikimedia-served thumbnail; displayed scaled or center-cropped, without AI generation or retouching.",
+    "retrievedOn": "2026-11-10",
+    "sha256": "60d8f048f6f2cdfa0a601abd767bd7e8e255c9ebadaacbd0b6a49ec31d28183b"
+  }
+]

@@ -47,7 +47,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   OnboardingStep(
                     icon: Icons.restaurant_menu_outlined,
                     title: '맞춤 레시피 추천',
-                    description: '내 냉장고 속 재료들로 만들 수 있는\n최고의 요리들을 발견하고 도전해보세요.',
+                    description: '내 냉장고 속 재료 이름과 맞는\n요리를 찾아보세요. 수량은 직접 확인해 주세요.',
                   ),
                   OnboardingStep(
                     icon: Icons.notifications_outlined,

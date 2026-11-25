@@ -1,10 +1,9 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
+import '../app_variant.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart' as kakao;
+import '../services/auth_gateway.dart';
 
-import '../providers.dart';
 import '../theme.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
@@ -22,160 +21,70 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  Future<void> _signInWithGoogle() async {
+  Future<void> _social(OAuthProvider provider) async {
+    if (_isLoading) return;
     setState(() => _isLoading = true);
     try {
-      print('구글 로그인 시도 시작 - Supabase OAuth 사용');
-
-      final supabase = ref.read(supabaseProvider);
-
-      if (kIsWeb) {
-        // 웹에서는 OAuth 리다이렉트 플로우 사용
-        print('웹에서 구글 OAuth 로그인 시도');
-        await supabase.auth.signInWithOAuth(
-          OAuthProvider.google,
-          redirectTo: kIsWeb
-              ? null
-              : 'io.supabase.flutterquickstart://login-callback/',
-        );
-      } else {
-        // 모바일에서는 OAuth 리다이렉트 플로우 사용 (더 간단함)
-        print('모바일에서 구글 OAuth 로그인 시도');
-        await supabase.auth.signInWithOAuth(
-          OAuthProvider.google,
-          redirectTo: 'io.supabase.flutterquickstart://login-callback/',
-        );
-      }
-
-      print('구글 로그인 요청 완료');
-    } on AuthException catch (e) {
-      print('인증 에러: ${e.message}');
-      if (mounted) _showErrorSnackBar('인증 오류: ${e.message}');
-    } catch (e) {
-      print('일반 에러: $e');
-      if (mounted) _showErrorSnackBar('구글 로그인 오류: $e');
-    }
-    if (mounted) {
-      setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _signInWithKakao() async {
-    setState(() => _isLoading = true);
-    try {
-      print('🥳 카카오 로그인 시작');
-
-      // 카카오톡 앱으로 로그인 시도, 실패하면 카카오계정으로 로그인
-      if (await kakao.isKakaoTalkInstalled()) {
-        print('📱 카카오톡 앱이 설치되어 있음. 카카오톡으로 로그인 시도');
-        await kakao.UserApi.instance.loginWithKakaoTalk();
-      } else {
-        print('🌐 카카오톡 앱이 없음. 카카오계정으로 로그인 시도');
-        await kakao.UserApi.instance.loginWithKakaoAccount();
-      }
-
-      print('✅ 카카오 로그인 성공');
-
-      // 카카오 사용자 정보 가져오기
-      kakao.User kakaoUser = await kakao.UserApi.instance.me();
-      print('👤 카카오 사용자 정보 가져오기 성공');
-
-      final String kakaoId = kakaoUser.id.toString();
-      final String? email = kakaoUser.kakaoAccount?.email;
-      final String? nickname = kakaoUser.kakaoAccount?.profile?.nickname;
-
-      print('📋 카카오 사용자 정보: ID=$kakaoId, email=$email, nickname=$nickname');
-
-      // 간단한 익명 로그인 방식으로 처리 (더 안정적)
-      final supabase = ref.read(supabaseProvider);
-
-      print('🔐 Supabase 익명 로그인 시도');
-      // 익명 로그인 후 사용자 데이터에 카카오 정보 저장
-      final response = await supabase.auth.signInAnonymously();
-
-      if (response.user != null) {
-        print('🎯 Supabase 로그인 성공, 사용자 정보 업데이트 중');
-        await supabase.auth.updateUser(
-          UserAttributes(
-            data: {
-              'kakao_id': kakaoId,
-              'provider': 'kakao',
-              'nickname': nickname,
-              'email': email,
-              'display_name': nickname,
-            },
+      final launched = await ref.read(authGatewayProvider).oauth(provider);
+      if (launched && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              '로그인 창에서 인증을 마쳐 주세요. 앱으로 돌아오지 않거나 로그인이 유지되지 않으면 다시 시도해 주세요.',
+            ),
           ),
         );
-        print('✨ 사용자 정보 업데이트 완료');
       }
-    } catch (e) {
-      print('❌ 카카오 로그인 에러: $e');
-      print('❌ 에러 타입: ${e.runtimeType}');
-      if (e is kakao.KakaoException) {
-        print('❌ 카카오 에러 정보: ${e.toString()}');
-        // 키 해시 에러일 경우 추가 정보 출력
-        if (e.toString().contains('hash') ||
-            e.toString().contains('Hash') ||
-            e.toString().contains('HASH')) {
-          print('🔑 키 해시 에러 감지! 다음 정보를 카카오 개발자 콘솔에 등록하세요:');
-          print('📋 패키지명: com.tcf.take_care_refrigerator');
-          print('📋 에러 메시지에서 올바른 키 해시를 확인하세요: $e');
-        }
+      if (!launched && mounted) {
+        _showErrorSnackBar('로그인 화면을 열지 못했어요. 다시 시도해 주세요.');
       }
-      if (mounted) _showErrorSnackBar('카카오 로그인 중 오류가 발생했습니다: $e');
-    }
-    if (mounted) {
-      setState(() => _isLoading = false);
+    } catch (_) {
+      if (mounted) _showErrorSnackBar('로그인 연결을 확인하고 다시 시도해 주세요.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  Future<void> _signInWithEmail() async {
-    if (!_formKey.currentState!.validate()) return;
-    setState(() => _isLoading = true);
-    try {
-      await ref
-          .read(supabaseProvider)
-          .auth
-          .signInWithPassword(
-            email: _emailController.text.trim(),
-            password: _passwordController.text.trim(),
-          );
-    } on AuthException catch (e) {
-      if (mounted) _showErrorSnackBar(e.message);
-    } catch (e) {
-      if (mounted) _showErrorSnackBar('An unexpected error occurred.');
-    }
-    if (mounted) {
-      setState(() => _isLoading = false);
-    }
+  Future<void> _signInWithGoogle() => _social(OAuthProvider.google);
+  Future<void> _signInWithKakao() async {
+    if (!const bool.fromEnvironment('KAKAO_OAUTH_ENABLED')) return;
+    await _social(OAuthProvider.kakao);
   }
 
-  Future<void> _signUpWithEmail() async {
-    if (!_formKey.currentState!.validate()) return;
+  Future<void> _email({required bool signup}) async {
+    if (_isLoading || !(_formKey.currentState?.validate() ?? false)) return;
     setState(() => _isLoading = true);
     try {
-      await ref
-          .read(supabaseProvider)
-          .auth
-          .signUp(
-            email: _emailController.text.trim(),
-            password: _passwordController.text.trim(),
-          );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('회원가입 완료! 이메일을 확인하여 인증해주세요.')),
+      final gateway = ref.read(authGatewayProvider);
+      if (signup) {
+        final signedIn = await gateway.signUp(
+          _emailController.text.trim(),
+          _passwordController.text,
         );
-        setState(() => _showEmailForm = false); // Hide form after signup
+        if (mounted && !signedIn) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('가입 요청을 접수했어요. 인증 메일이 도착하면 안내를 확인해 주세요.'),
+            ),
+          );
+        }
+      } else {
+        await gateway.signIn(
+          _emailController.text.trim(),
+          _passwordController.text,
+        );
       }
-    } on AuthException catch (e) {
-      if (mounted) _showErrorSnackBar(e.message);
-    } catch (e) {
-      if (mounted) _showErrorSnackBar('An unexpected error occurred.');
-    }
-    if (mounted) {
-      setState(() => _isLoading = false);
+    } catch (_) {
+      if (mounted) {
+        _showErrorSnackBar('요청을 완료하지 못했어요. 입력 정보와 연결을 확인하고 다시 시도해 주세요.');
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
+
+  Future<void> _signInWithEmail() => _email(signup: false);
+  Future<void> _signUpWithEmail() => _email(signup: true);
 
   void _showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -202,7 +111,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               padding: const EdgeInsets.all(24.0),
               child: ConstrainedBox(
                 constraints: BoxConstraints(
-                  minHeight: constraints.maxHeight - 48, // 패딩 고려
+                  minHeight: (constraints.maxHeight - 48).clamp(
+                    0.0,
+                    double.infinity,
+                  ), // 패딩 고려
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -233,9 +145,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       style: TextStyle(fontSize: 16, color: mediumGray),
                     ),
                     SizedBox(height: constraints.maxHeight * 0.15), // 중간 여백
-                    if (_isLoading)
-                      const Center(child: CircularProgressIndicator())
-                    else if (_showEmailForm)
+                    if (_isLoading) const LinearProgressIndicator(),
+                    if (_showEmailForm)
                       _buildEmailForm()
                     else
                       _buildInitialActions(),
@@ -256,8 +167,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (isDevelopmentApp)
+          const Padding(
+            padding: EdgeInsets.only(bottom: 16),
+            child: Text(
+              '개발용 앱 · Google 로그인은 이 앱의 전용 콜백 주소를 사용해요. 로그인 후 돌아오지 않으면 창을 닫고 다시 시도해 주세요.',
+              textAlign: TextAlign.center,
+            ),
+          ),
         ElevatedButton(
-          onPressed: _signInWithGoogle,
+          onPressed: _isLoading ? null : _signInWithGoogle,
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 16),
@@ -265,7 +184,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               borderRadius: BorderRadius.circular(12),
             ),
           ),
-          child: const Text(
+          child: Text(
             'Google로 로그인',
             style: TextStyle(
               fontSize: 16,
@@ -276,7 +195,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         ),
         const SizedBox(height: 12),
         ElevatedButton(
-          onPressed: _signInWithKakao,
+          onPressed:
+              isDevelopmentApp ||
+                  _isLoading ||
+                  !const bool.fromEnvironment('KAKAO_OAUTH_ENABLED')
+              ? null
+              : _signInWithKakao,
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFFFEE500), // Kakao yellow
             padding: const EdgeInsets.symmetric(vertical: 16),
@@ -285,7 +209,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             ),
           ),
           child: const Text(
-            '카카오로 로그인',
+            const bool.fromEnvironment('KAKAO_OAUTH_ENABLED')
+                ? '카카오로 로그인'
+                : '카카오 로그인 준비 중',
             style: TextStyle(
               fontSize: 16,
               color: Color(0xFF191919),
@@ -293,9 +219,19 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             ),
           ),
         ),
+        if (!const bool.fromEnvironment('KAKAO_OAUTH_ENABLED'))
+          const Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: Text(
+              '카카오 계정 연결을 확인 중이에요. 익명 계정으로 대신 로그인하지 않아요.',
+              textAlign: TextAlign.center,
+            ),
+          ),
         const SizedBox(height: 12),
         TextButton(
-          onPressed: () => setState(() => _showEmailForm = true),
+          onPressed: _isLoading
+              ? null
+              : () => setState(() => _showEmailForm = true),
           child: const Text(
             '이메일로 로그인 또는 회원가입',
             style: TextStyle(color: mediumGray),
@@ -315,6 +251,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             children: [
               TextFormField(
                 controller: _emailController,
+                enabled: !_isLoading,
                 decoration: const InputDecoration(labelText: '이메일'),
                 keyboardType: TextInputType.emailAddress,
                 validator: (value) => (value == null || !value.contains('@'))
@@ -324,6 +261,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _passwordController,
+                enabled: !_isLoading,
                 decoration: const InputDecoration(labelText: '비밀번호'),
                 obscureText: true,
                 validator: (value) => (value == null || value.length < 6)
@@ -335,7 +273,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         ),
         const SizedBox(height: 24),
         ElevatedButton(
-          onPressed: _signInWithEmail,
+          onPressed: _isLoading ? null : _signInWithEmail,
           style: ElevatedButton.styleFrom(
             backgroundColor: primaryBlue, // Change color for better visibility
             padding: const EdgeInsets.symmetric(vertical: 16),
@@ -354,7 +292,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         ),
         const SizedBox(height: 12),
         OutlinedButton(
-          onPressed: _signUpWithEmail,
+          onPressed: _isLoading ? null : _signUpWithEmail,
           style: OutlinedButton.styleFrom(
             side: const BorderSide(color: primaryBlue),
             padding: const EdgeInsets.symmetric(vertical: 16),
@@ -369,7 +307,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         ),
         const SizedBox(height: 12),
         TextButton(
-          onPressed: () => setState(() => _showEmailForm = false),
+          onPressed: _isLoading
+              ? null
+              : () => setState(() => _showEmailForm = false),
           child: const Text('뒤로가기', style: TextStyle(color: mediumGray)),
         ),
       ],

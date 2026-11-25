@@ -1,0 +1,88 @@
+Recipe example photographs
+==========================
+These photos illustrate similar dishes, not the actual result of any recipe.
+Only reviewed exact dish-name aliases are permitted.
+No endorsement by the photographers is implied.
+Changes: Commons-served thumbnail; display may scale or center-crop.
+The Strawberry salad image and its displayed crop remain under CC BY-SA 4.0.
+Licenses below apply to the respective images, not to unrelated application code.
+
+File:Banana Smoothie.jpg
+Asset: assets/images/recipe_examples/banana_smoothie.jpg
+Author: Ourlibrary
+Source: https://commons.wikimedia.org/wiki/File:Banana_Smoothie.jpg
+License: CC0
+License URL: https://creativecommons.org/publicdomain/zero/1.0/deed.en
+Modifications: Commons-served thumbnail; displayed scaled or center-cropped. Example only, not a photo of this recipe.
+
+File:Autumn Soup (Unsplash) cropped.jpg
+Asset: assets/images/recipe_examples/pumpkin_soup.jpg
+Author: Cala cala_maffia
+Source: https://commons.wikimedia.org/wiki/File:Autumn_Soup_(Unsplash)_cropped.jpg
+License: CC0
+License URL: https://creativecommons.org/publicdomain/zero/1.0/deed.en
+Modifications: Commons-served thumbnail; displayed scaled or center-cropped. Example only, not a photo of this recipe.
+
+File:Potato salad-2.jpg
+Asset: assets/images/recipe_examples/potato_salad.jpg
+Author: jules
+Source: https://commons.wikimedia.org/wiki/File:Potato_salad-2.jpg
+License: CC BY 2.0
+License URL: https://creativecommons.org/licenses/by/2.0
+Modifications: Commons-served thumbnail; displayed scaled or center-cropped. Example only, not a photo of this recipe.
+
+File:Miso Soup 001.jpg
+Asset: assets/images/recipe_examples/miso_soup.jpg
+Author: Ocdp
+Source: https://commons.wikimedia.org/wiki/File:Miso_Soup_001.jpg
+License: CC0
+License URL: https://creativecommons.org/publicdomain/zero/1.0/deed.en
+Modifications: Commons-served thumbnail; displayed scaled or center-cropped. Example only, not a photo of this recipe.
+
+File:Subak-hwachae.jpg
+Asset: assets/images/recipe_examples/watermelon_punch.jpg
+Author: Dr 방원장
+Source: https://commons.wikimedia.org/wiki/File:Subak-hwachae.jpg
+License: CC BY 4.0
+License URL: https://creativecommons.org/licenses/by/4.0
+Modifications: Commons-served thumbnail; displayed scaled or center-cropped. Example only, not a photo of this recipe.
+
+File:Strawberry salad.jpg
+Asset: assets/images/recipe_examples/strawberry_salad.jpg
+Author: E4024
+Source: https://commons.wikimedia.org/wiki/File:Strawberry_salad.jpg
+License: CC BY-SA 4.0
+License URL: https://creativecommons.org/licenses/by-sa/4.0
+Modifications: Commons-served thumbnail; displayed scaled or center-cropped. Example only, not a photo of this recipe.
+
+File:Ginanggang (Philippines) 01.jpg
+Asset: assets/images/recipe_examples/grilled_banana.jpg
+Author: Obsidian Soul
+Source: https://commons.wikimedia.org/wiki/File:Ginanggang_(Philippines)_01.jpg
+License: CC0
+License URL: https://creativecommons.org/publicdomain/zero/1.0/deed.en
+Modifications: Commons-served thumbnail; displayed scaled or center-cropped. Example only, not a photo of this recipe.
+
+File:Vegan Pumpkin Custard (4320833119).jpg
+Asset: assets/images/recipe_examples/pumpkin_pudding.jpg
+Author: Vegan Feast Catering
+Source: https://commons.wikimedia.org/wiki/File:Vegan_Pumpkin_Custard_(4320833119).jpg
+License: CC BY 2.0
+License URL: https://creativecommons.org/licenses/by/2.0
+Modifications: Commons-served thumbnail; displayed scaled or center-cropped. Example only, not a photo of this recipe.
+
+File:Stir-fried broccoli.jpg
+Asset: assets/images/recipe_examples/broccoli_stirfry.jpg
+Author: Fumikas Sagisavas
+Source: https://commons.wikimedia.org/wiki/File:Stir-fried_broccoli.jpg
+License: CC0
+License URL: https://creativecommons.org/publicdomain/zero/1.0/deed.en
+Modifications: Commons-served thumbnail; displayed scaled or center-cropped. Example only, not a photo of this recipe.
+
+File:Parfaits at Harvest Table - February 2023 - Sarah Stierch.jpg
+Asset: assets/images/recipe_examples/yogurt_parfait.jpg
+Author: Missvain
+Source: https://commons.wikimedia.org/wiki/File:Parfaits_at_Harvest_Table_-_February_2023_-_Sarah_Stierch.jpg
+License: CC BY 4.0
+License URL: https://creativecommons.org/licenses/by/4.0
+Modifications: Commons-served thumbnail; displayed scaled or center-cropped. Example only, not a photo of this recipe.

@@ -1,0 +1,45 @@
+[
+  {
+    "source_id": "700",
+    "name": "쑥호두달걀말이",
+    "asset_path": "assets/images/recipes/mfds_700.jpg",
+    "image_url": "https://www.foodsafetykorea.go.kr/uploadimg/20141118/20141118101931_1416273571762.jpg",
+    "evidence_urls": [
+      "https://www.foodsafetykorea.go.kr/popup/sensuousmenuView.do?rcp_menu_no=101",
+      "https://www.recipedelight.co.kr/recipe/700"
+    ],
+    "source_url": "https://www.foodsafetykorea.go.kr/api/newDatasetDetail.do?svc_no=COOKRCP01",
+    "author": "식품의약품안전처",
+    "license": "이용허락범위 제한 없음",
+    "license_url": "https://www.data.go.kr/data/15060073/openapi.do",
+    "retrieved_on": "2026-11-12",
+    "sha256": "97ef01be78796157d4fb409f6963afc752855bb02b5e482d7eb3cc8729e06999",
+    "width": 350,
+    "height": 262,
+    "visual_review": "Finished dish inspected from downloaded official-host bytes. Exact dish title and source number corroborated by linked public records.",
+    "matching": "Exact official source URI + mfds-import source number + exact title. No app UUID snapshot retained.",
+    "modifications": "Original bytes retained; display scaled/cropped. 3009 aligned to bottom to keep plated dish in view."
+  },
+  {
+    "source_id": "3009",
+    "name": "아욱 된장무침",
+    "asset_path": "assets/images/recipes/mfds_3009.jpg",
+    "image_url": "https://www.foodsafetykorea.go.kr/uploadimg/20190410/20190410114015_1554864015237.jpg",
+    "evidence_urls": [
+      "https://www.recipedelight.co.kr/recipe/3009",
+      "https://cookdb.net/recipe/아욱-된장무침/",
+      "https://wellnessground.kr/food/recipe/3009/"
+    ],
+    "source_url": "https://www.foodsafetykorea.go.kr/api/newDatasetDetail.do?svc_no=COOKRCP01",
+    "author": "식품의약품안전처",
+    "license": "이용허락범위 제한 없음",
+    "license_url": "https://www.data.go.kr/data/15060073/openapi.do",
+    "retrieved_on": "2026-11-12",
+    "sha256": "ec4cd2ea23b493181a208a0439a0ff4a2e8002fefdf68671a9472f83707b4fe8",
+    "width": 1280,
+    "height": 1920,
+    "visual_review": "Finished dish inspected from downloaded official-host bytes. Exact dish title and source number corroborated by linked public records.",
+    "matching": "Exact official source URI + mfds-import source number + exact title. No app UUID snapshot retained.",
+    "modifications": "Original bytes retained; display scaled/cropped. 3009 aligned to bottom to keep plated dish in view."
+  }
+]

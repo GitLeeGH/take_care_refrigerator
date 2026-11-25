@@ -1,0 +1,14 @@
+name: reminder_bridge
+version: 0.0.1
+publish_to: none
+environment:
+  sdk: ^3.9.0
+dependencies:
+  flutter:
+    sdk: flutter
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.tcf.reminder_bridge
+        pluginClass: ReminderBridgePlugin

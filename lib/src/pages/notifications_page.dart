@@ -1,3 +1,8 @@
+import '../widgets/app_presentation.dart';
+import '../widgets/local_expiry_card.dart';
+import '../widgets/test_notification_card.dart';
+import '../widgets/one_shot_expiry_card.dart';
+import '../services/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -16,11 +21,12 @@ class NotificationsPage extends ConsumerWidget {
     // 동적으로 생성된 알림 사용 (중복 방지, 삭제된 항목 제외)
     final notifications = ref.watch(generatedNotificationsProvider);
 
-    const accentColor = Color(0xFF20C997);
+    const accentColor = primaryGreen;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: lightGray,
       appBar: AppBar(
+        toolbarHeight: pageToolbarHeight(context),
         title: Row(
           children: [
             const Text(
@@ -32,8 +38,8 @@ class NotificationsPage extends ConsumerWidget {
                 margin: const EdgeInsets.only(left: 8),
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: Colors.red,
-                  borderRadius: BorderRadius.circular(12),
+                  color: dangerInk,
+                  borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   '${notifications.length}',
@@ -46,7 +52,7 @@ class NotificationsPage extends ConsumerWidget {
               ),
           ],
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: lightGray,
         elevation: 0,
         centerTitle: false,
         actions: [
@@ -59,17 +65,16 @@ class NotificationsPage extends ConsumerWidget {
               },
               child: const Text(
                 '모두 지우기',
-                style: TextStyle(
-                  color: Colors.red,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(color: dangerInk, fontWeight: FontWeight.w600),
               ),
             ),
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.fromLTRB(pageGutter, 8, pageGutter, 28),
         children: [
+          const LocalExpiryCard(),
+          const SizedBox(height: 16),
           // 알림 목록 섹션
           if (notifications.isNotEmpty) ...[
             const Text(
@@ -78,6 +83,12 @@ class NotificationsPage extends ConsumerWidget {
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: darkGray,
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.only(top: 8),
+              child: Text(
+                '지운 알림은 다음 날이나 소비기한 변경 시 다시 표시됩니다. 앱을 다시 시작하면 표시될 수 있습니다.',
               ),
             ),
             const SizedBox(height: 12),
@@ -95,7 +106,7 @@ class NotificationsPage extends ConsumerWidget {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(20),
               ),
               child: const Column(
                 children: [
@@ -139,7 +150,7 @@ class NotificationsPage extends ConsumerWidget {
             elevation: 0,
             color: Colors.white,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(20),
             ),
             child: SwitchListTile(
               contentPadding: const EdgeInsets.symmetric(
@@ -147,11 +158,11 @@ class NotificationsPage extends ConsumerWidget {
                 vertical: 10,
               ),
               title: const Text(
-                '유통기한 알림 받기',
+                '앱 안에서 기한 안내 보기',
                 style: TextStyle(fontWeight: FontWeight.w600),
               ),
               subtitle: const Text(
-                '설정한 기간에 따라 유통기한 임박 알림을 보냅니다.',
+                '현재 계정의 재료를 앱 화면에서 확인합니다. 시스템 알림은 발송하지 않습니다.',
                 style: TextStyle(color: mediumGray),
               ),
               value: settings.notificationsEnabled,
@@ -165,7 +176,7 @@ class NotificationsPage extends ConsumerWidget {
             elevation: 0,
             color: Colors.white,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(20),
             ),
             child: ListTile(
               contentPadding: const EdgeInsets.symmetric(
@@ -173,7 +184,7 @@ class NotificationsPage extends ConsumerWidget {
                 vertical: 10,
               ),
               title: const Text(
-                '알림 시기 설정',
+                '화면 안내 기간 설정',
                 style: TextStyle(fontWeight: FontWeight.w600),
               ),
               trailing: Text(
@@ -186,26 +197,29 @@ class NotificationsPage extends ConsumerWidget {
                   showDialog(
                     context: context,
                     builder: (context) => AlertDialog(
-                      title: const Text('알림 시기 선택'),
-                      content: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [1, 3, 7].map((days) {
-                          return RadioListTile<int>(
-                            title: Text('$days일 전'),
-                            value: days,
-                            groupValue: settings.daysBefore,
-                            activeColor: accentColor,
-                            onChanged: (value) {
-                              if (value != null) {
-                                settingsNotifier.setDaysBefore(value);
-                                Navigator.of(context).pop();
-                              }
-                            },
-                          );
-                        }).toList(),
+                      title: const Text('화면 안내 기간 선택'),
+                      content: RadioGroup<int>(
+                        groupValue: settings.daysBefore,
+                        onChanged: (value) {
+                          if (value != null) {
+                            settingsNotifier.setDaysBefore(value);
+                            Navigator.of(context).pop();
+                          }
+                        },
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            for (final days in [1, 3, 7])
+                              RadioListTile<int>(
+                                title: Text('$days일 전'),
+                                value: days,
+                                activeColor: accentColor,
+                              ),
+                          ],
+                        ),
                       ),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(20),
                       ),
                     ),
                   );
@@ -214,73 +228,35 @@ class NotificationsPage extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 16),
-          // 임박 재료 즉시 알림 버튼
-          Card(
-            elevation: 0,
-            color: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 10,
-              ),
-              title: const Text(
-                '임박 재료 즉시 알림',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-              subtitle: const Text(
-                '유통기한이 임박한 재료들을 바로 확인합니다.',
-                style: TextStyle(color: mediumGray),
-              ),
-              trailing: ElevatedButton(
-                onPressed: () async {
-                  final notificationService = await ref.read(
-                    notificationServiceProvider.future,
-                  );
-                  final ingredientsValue = ref.read(ingredientsProvider);
-
-                  if (ingredientsValue.hasValue) {
-                    final ingredients = ingredientsValue.value!;
-                    final now = DateTime.now();
-                    int alertCount = 0;
-
-                    for (final ingredient in ingredients) {
-                      final daysLeft = ingredient.expiryDate
-                          .difference(now)
-                          .inDays;
-                      if (daysLeft <= 3) {
-                        // 3일 이내
-                        await notificationService.showImmediateExpiryAlert(
-                          ingredient.name,
-                          daysLeft,
-                        );
-                        alertCount++;
-                        await Future.delayed(
-                          const Duration(milliseconds: 500),
-                        ); // 알림 간격
-                      }
-                    }
-
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            alertCount > 0
-                                ? '$alertCount개의 임박 재료 알림을 전송했습니다!'
-                                : '임박한 재료가 없습니다.',
-                          ),
-                        ),
-                      );
-                    }
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFFB74D), // Orange
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text('확인'),
+          NotificationSettingsStatus(
+            status: settings.persistenceStatus,
+            onRetry: settingsNotifier.retryPersistence,
+          ),
+          const SizedBox(height: 16),
+          const OneShotExpiryCard(),
+          const TestNotificationCard(),
+          ValueListenableBuilder<NotificationCleanupStatus>(
+            valueListenable: NotificationService().status,
+            builder: (context, status, _) => Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Text(switch (status) {
+                    NotificationCleanupStatus.pending =>
+                      '기존 테스트 알림을 확인하고 있습니다. 응답이 늦으면 정리가 지연될 수 있습니다.',
+                    NotificationCleanupStatus.complete =>
+                      '확인 가능한 기존 테스트 알림만 정리했습니다. 다른 알림은 유지합니다.',
+                    NotificationCleanupStatus.failed =>
+                      '일부 테스트 알림의 확인 또는 정리를 완료하지 못했습니다. 다른 알림은 유지하며 다시 시도할 수 있습니다.',
+                  }),
+                  if (status == NotificationCleanupStatus.failed)
+                    TextButton(
+                      onPressed: () {
+                        NotificationService().cancelLegacyNotifications();
+                      },
+                      child: const Text('예약 정리 다시 시도'),
+                    ),
+                ],
               ),
             ),
           ),
@@ -288,7 +264,7 @@ class NotificationsPage extends ConsumerWidget {
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16.0),
             child: Text(
-              '알림은 설정된 시간(오전 9시)에 전송됩니다.',
+              '이 설정은 현재 계정의 앱 화면 안내에만 적용됩니다.',
               style: TextStyle(
                 color: mediumGray,
                 fontStyle: FontStyle.italic,
@@ -312,15 +288,15 @@ class NotificationsPage extends ConsumerWidget {
 
     switch (notification.priority) {
       case NotificationPriority.urgent:
-        priorityColor = Colors.red;
+        priorityColor = dangerInk;
         priorityIcon = Icons.error_outline;
         break;
       case NotificationPriority.warning:
-        priorityColor = const Color(0xFFFFB74D);
+        priorityColor = warningInk;
         priorityIcon = Icons.warning_amber_outlined;
         break;
       case NotificationPriority.info:
-        priorityColor = const Color(0xFF20C997);
+        priorityColor = primaryGreen;
         priorityIcon = Icons.info_outline;
         break;
     }
@@ -330,14 +306,14 @@ class NotificationsPage extends ConsumerWidget {
       child: Card(
         elevation: 0,
         color: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: ListTile(
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,
             vertical: 8,
           ),
           leading: CircleAvatar(
-            backgroundColor: priorityColor.withOpacity(0.1),
+            backgroundColor: priorityColor.withValues(alpha: 0.1),
             child: Icon(priorityIcon, color: priorityColor, size: 20),
           ),
           title: Text(
@@ -389,10 +365,7 @@ class NotificationsPage extends ConsumerWidget {
                       onRemove();
                       Navigator.of(context).pop();
                     },
-                    child: const Text(
-                      '삭제',
-                      style: TextStyle(color: Colors.red),
-                    ),
+                    child: const Text('삭제', style: TextStyle(color: dangerInk)),
                   ),
                 ],
               ),
@@ -418,5 +391,69 @@ class NotificationsPage extends ConsumerWidget {
     } else {
       return '${dateTime.month}/${dateTime.day} ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
     }
+  }
+}
+
+/// Persistence feedback is separate from system notification permissions.
+class NotificationSettingsStatus extends StatelessWidget {
+  const NotificationSettingsStatus({
+    super.key,
+    required this.status,
+    required this.onRetry,
+  });
+  final NotificationSettingsPersistence status;
+  final Future<void> Function() onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final failed =
+        status == NotificationSettingsPersistence.loadFailed ||
+        status == NotificationSettingsPersistence.writeFailed;
+    final message = switch (status) {
+      NotificationSettingsPersistence.saved => '현재 계정의 화면 안내 설정이 이 기기에 저장됩니다.',
+      NotificationSettingsPersistence.saving => '화면 안내 설정을 저장하고 있어요.',
+      NotificationSettingsPersistence.loadFailed =>
+        '저장된 설정을 읽지 못해 앱 안의 기한 안내를 꺼 두었어요. 다시 불러오거나 설정을 직접 선택해 주세요.',
+      NotificationSettingsPersistence.writeFailed =>
+        '선택한 설정은 지금 적용되지만 저장하지 못했어요. 앱을 다시 시작하기 전에 다시 시도해 주세요.',
+      NotificationSettingsPersistence.memoryOnly => '화면 안내 설정은 이번 실행에만 적용됩니다.',
+    };
+    return Semantics(
+      liveRegion: failed || status == NotificationSettingsPersistence.saving,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: failed ? peachSurface : softGreen,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              message,
+              style: TextStyle(
+                color: failed ? warningInk : mediumGray,
+                fontSize: 12,
+                height: 1.5,
+              ),
+            ),
+            if (failed) ...[
+              const SizedBox(height: 6),
+              TextButton.icon(
+                onPressed: () {
+                  onRetry();
+                },
+                icon: const Icon(Icons.refresh, size: 18),
+                label: Text(
+                  status == NotificationSettingsPersistence.loadFailed
+                      ? '설정 다시 불러오기'
+                      : '설정 저장 다시 시도',
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 }

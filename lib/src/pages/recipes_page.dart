@@ -1,16 +1,24 @@
+import '../services/recipe_example_photos.dart';
+import '../services/recipe_photos.dart';
+import '../services/recipe_preview.dart';
+import '../widgets/app_presentation.dart';
+import 'local_curation_page.dart';
+import '../widgets/pantry_match_panel.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
 
 import '../providers.dart';
 import '../models.dart';
+import '../ingredient_matching.dart';
 import '../theme.dart';
+import '../widgets/recipe_cover.dart';
 import 'add_recipe_page.dart';
+import 'recipe_import_page.dart';
+import 'recipe_detail_page.dart';
+export 'recipe_detail_page.dart' show RecipeDetailPage;
 
 class RecipesPage extends ConsumerStatefulWidget {
   const RecipesPage({super.key});
@@ -20,144 +28,192 @@ class RecipesPage extends ConsumerStatefulWidget {
 }
 
 class _RecipesPageState extends ConsumerState<RecipesPage> {
-  final ScrollController _scrollController = ScrollController();
-
-  @override
-  void initState() {
-    super.initState();
-    // The listener for the scroll controller to trigger pagination
-    _scrollController.addListener(() {
-      if (_scrollController.position.pixels >=
-          _scrollController.position.maxScrollExtent * 0.9) {
-        ref.read(paginatedRecipesProvider.notifier).fetchNextPage();
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     final userProfile = ref.watch(userProfileProvider);
-    final recipesState = ref.watch(paginatedRecipesProvider);
-    final filteredRecipes = ref.watch(filteredPaginatedRecipesProvider);
-
+    final state = ref.watch(paginatedRecipesProvider);
+    final recipes = ref.watch(filteredPaginatedRecipesProvider);
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: lightGray,
       appBar: AppBar(
-        title: const RecipeSearchBar(),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: false,
-      ),
-      body: Column(
-        children: [
-          const SortOptions(),
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: () =>
-                  ref.read(paginatedRecipesProvider.notifier).init(),
-              child: (recipesState.recipes.isEmpty && recipesState.isLoading)
-                  ? _buildLoadingShimmer()
-                  : _buildRecipeList(filteredRecipes, recipesState.hasMore),
+        toolbarHeight: pageToolbarHeight(context),
+        title: const Text('레시피'),
+        actions: [
+          IconButton(
+            tooltip: '\ub0b4 \uc7ac\ub8cc\ub85c \ucd94\ucc9c',
+            icon: const Icon(Icons.tune_rounded),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const LocalCurationPage()),
             ),
+          ),
+          IconButton(
+            tooltip: '\uc601\uc0c1 \ub808\uc2dc\ud53c \ubbf8\ub9ac\ubcf4\uae30',
+            icon: const Icon(Icons.video_library_outlined),
+            onPressed: () => Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const RecipeImportPage())),
           ),
         ],
       ),
-      floatingActionButton: userProfile.when(
-        data: (profile) {
-          if (profile?.role == 'admin') {
-            return FloatingActionButton(
-              heroTag: UniqueKey(),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const AddRecipePage(),
+      body: RefreshIndicator(
+        onRefresh: () => ref.read(paginatedRecipesProvider.notifier).refresh(),
+        child: ListView(
+          key: const ValueKey('menu-editorial-scroll'),
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(pageGutter, 8, pageGutter, 28),
+          children: [
+            const Text(
+              '\uc624\ub298\uc758 \ud55c \ub07c',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.w700,
+                color: darkGray,
+                letterSpacing: -1.1,
+                height: 1.2,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              '\ub0c9\uc7a5\uace0 \uc18d \uc7ac\ub8cc\ub85c, \ub354 \ub9db\uc788\uac8c.',
+              style: TextStyle(color: mediumGray, fontSize: 14),
+            ),
+            const SizedBox(height: 24),
+            const RecipeSearchBar(),
+            const SizedBox(height: 20),
+            Material(
+              color: softGreen,
+              borderRadius: BorderRadius.circular(18),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const LocalCurationPage()),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.auto_awesome_rounded,
+                        size: 22,
+                        color: primaryGreen,
+                      ),
+                      const SizedBox(width: 16),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '\ub0b4 \uc7ac\ub8cc\ub85c \ucd94\ucc9c',
+                              style: TextStyle(
+                                color: darkGray,
+                                fontSize: 17,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            SizedBox(height: 5),
+                            Text(
+                              '\ubcf4\uc720 \uc7ac\ub8cc\uc640 \ucde8\ud5a5\uc73c\ub85c \uba54\ub274 \ucc3e\uae30',
+                              style: TextStyle(
+                                color: darkGray,
+                                fontSize: 13,
+                                height: 1.45,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Icon(
+                        Icons.arrow_forward_rounded,
+                        color: primaryGreen,
+                      ),
+                    ],
                   ),
-                );
-              },
-              backgroundColor: primaryBlue,
-              child: const Icon(Icons.add, color: Colors.white),
-            );
-          }
-          return null;
+                ),
+              ),
+            ),
+            const SizedBox(height: 28),
+            const Text(
+              '\ub808\uc2dc\ud53c \ub458\ub7ec\ubcf4\uae30',
+              style: sectionHeadingStyle,
+            ),
+            const SizedBox(height: 12),
+            const SortOptions(),
+            if (state.hasError)
+              TextButton.icon(
+                onPressed: () =>
+                    ref.read(paginatedRecipesProvider.notifier).retry(),
+                icon: const Icon(Icons.refresh),
+                label: const Text(
+                  '\ub808\uc2dc\ud53c\ub97c \ubd88\ub7ec\uc624\uc9c0 \ubabb\ud588\uc5b4\uc694 \u00b7 \ub2e4\uc2dc \uc2dc\ub3c4',
+                ),
+              ),
+            const SizedBox(height: 12),
+            if (recipes.isEmpty && state.isLoading)
+              Shimmer.fromColors(
+                baseColor: warmBorder,
+                highlightColor: Colors.white,
+                child: const Column(
+                  children: [RecipeCardSkeleton(), RecipeCardSkeleton()],
+                ),
+              )
+            else if (recipes.isEmpty)
+              AppEmptyState(
+                icon: Icons.restaurant_menu_outlined,
+                title: state.hasError
+                    ? '\uac80\uc0c9\uc744 \uc644\ub8cc\ud558\uc9c0 \ubabb\ud588\uc5b4\uc694'
+                    : state.hasMore
+                    ? '\uc544\uc9c1 \uc77c\uce58\ud558\ub294 \ub808\uc2dc\ud53c\ub97c \ucc3e\uc9c0 \ubabb\ud588\uc5b4\uc694'
+                    : '\ud45c\uc2dc\ud560 \ub808\uc2dc\ud53c\uac00 \uc5c6\uc5b4\uc694',
+                message: state.hasError
+                    ? '\uc544\ub798 \ub2e4\uc2dc \uc2dc\ub3c4\ub85c \uc911\ub2e8\ub41c \uac80\uc0c9\uc744 \uc774\uc5b4\uac08 \uc218 \uc788\uc5b4\uc694.'
+                    : state.hasMore
+                    ? '${state.scannedCount}\uac1c\ub97c \ud655\uc778\ud588\uc5b4\uc694. \ub2e4\uc74c \ub808\uc2dc\ud53c\ub97c \ub354 \ucc3e\uc544\ubcfc \uc218 \uc788\uc5b4\uc694.'
+                    : '\uac80\uc0c9\uc5b4\uc640 \ud544\ud130\ub97c \ud655\uc778\ud558\uac70\ub098 \uc544\ub798\ub85c \ub2f9\uaca8 \ub2e4\uc2dc \ubd88\ub7ec\uc640 \uc8fc\uc138\uc694.',
+                action: state.hasMore && !state.hasError
+                    ? TextButton(
+                        onPressed: () => ref
+                            .read(paginatedRecipesProvider.notifier)
+                            .fetchNextPage(),
+                        child: const Text('\ub354 \ucc3e\uae30'),
+                      )
+                    : null,
+              )
+            else ...[
+              for (final recipe in recipes) RecipeCard(recipe: recipe),
+              if (state.hasMore && !state.hasError)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  child: Center(
+                    child: state.isLoading
+                        ? const CircularProgressIndicator()
+                        : TextButton(
+                            onPressed: () => ref
+                                .read(paginatedRecipesProvider.notifier)
+                                .fetchNextPage(),
+                            child: const Text(
+                              '\ub354 \ubd88\ub7ec\uc624\uae30',
+                            ),
+                          ),
+                  ),
+                ),
+            ],
+          ],
+        ),
+      ),
+      bottomNavigationBar: userProfile.when(
+        data: (profile) {
+          if (profile?.role != 'admin') return null;
+          return RecipeCreateAction(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AddRecipePage()),
+            ),
+          );
         },
         loading: () => const SizedBox.shrink(),
         error: (e, s) => const SizedBox.shrink(),
       ),
-    );
-  }
-
-  Widget _buildLoadingShimmer() {
-    return Shimmer.fromColors(
-      baseColor: Colors.grey[300]!,
-      highlightColor: Colors.grey[100]!,
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: 5,
-        itemBuilder: (context, index) => const RecipeCardSkeleton(),
-      ),
-    );
-  }
-
-  Widget _buildRecipeList(List<Recipe> recipes, bool hasMore) {
-    if (recipes.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(40.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.search_off, size: 80, color: mediumGray),
-              SizedBox(height: 24),
-              Text(
-                '레시피를 찾을 수 없어요',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: darkGray,
-                ),
-              ),
-              SizedBox(height: 12),
-              Text(
-                '검색어를 확인하시거나\n다른 정렬을 시도해보세요.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16, color: mediumGray, height: 1.5),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return ListView.builder(
-      controller: _scrollController,
-      padding: const EdgeInsets.all(16),
-      itemCount: recipes.length + (hasMore ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (index == recipes.length) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 20),
-            child: Center(child: CircularProgressIndicator()),
-          );
-        }
-        final recipe = recipes[index];
-        // We need to create a RecommendedRecipe object to pass to the card
-        // This part is a bit of a hack because we don't have the recommendation details here
-        // A better solution would be to refactor RecipeCard to not require it.
-        final recommendedRecipe = RecommendedRecipe(
-          recipe: recipe,
-          ownedIngredientsCount: 0, // Placeholder
-          requiredIngredientsCount: recipe.requiredIngredients.length,
-          missingIngredients: [], // Placeholder
-        );
-        return RecipeCard(recommendedRecipe: recommendedRecipe);
-      },
     );
   }
 }
@@ -180,8 +236,8 @@ class _RecipeSearchBarState extends ConsumerState<RecipeSearchBar> {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 48,
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 56),
       child: TextField(
         onChanged: (query) {
           if (_debounce?.isActive ?? false) _debounce?.cancel();
@@ -191,11 +247,14 @@ class _RecipeSearchBarState extends ConsumerState<RecipeSearchBar> {
           });
         },
         decoration: InputDecoration(
-          hintText: '레시피 검색...',
+          hintText: '레시피 검색',
           prefixIcon: const Icon(Icons.search, color: mediumGray),
           filled: true,
-          fillColor: const Color(0xFFF1F3F5),
-          contentPadding: EdgeInsets.zero,
+          fillColor: Colors.white,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 18,
+          ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(24),
             borderSide: BorderSide.none,
@@ -216,73 +275,80 @@ class SortOptions extends ConsumerWidget {
 
     final sortOptions = {
       '추천순': RecipeSortType.recommended,
-      '인기순': RecipeSortType.popular,
-      '최신순': RecipeSortType.recent,
+      '전체 탐색 · 인기순': RecipeSortType.popular,
+      '전체 탐색 · 최신순': RecipeSortType.recent,
     };
 
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
-      color: Colors.white,
-      child: Row(
+    return Padding(
+      padding: EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: sortOptions.entries.map((entry) {
-                  final isSelected = selectedSort == entry.value;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8.0),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (final entry in sortOptions.entries)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
                     child: ChoiceChip(
                       label: Text(entry.key),
-                      selected: isSelected,
+                      selected: selectedSort == entry.value,
+                      selectedColor: primaryGreen,
+                      backgroundColor: softGreen,
+                      showCheckmark: false,
+                      side: BorderSide.none,
+                      shape: const StadiumBorder(),
+                      labelStyle: TextStyle(
+                        color: selectedSort == entry.value
+                            ? Colors.white
+                            : darkGray,
+                        fontWeight: FontWeight.w600,
+                      ),
                       onSelected: (selected) {
                         if (selected) {
                           ref
                               .read(recipeSortProvider.notifier)
                               .update(entry.value);
-                          // 정렬 변경 시 레시피 목록 provider 무효화
                           ref.invalidate(paginatedRecipesProvider);
                         }
                       },
-                      selectedColor: primaryBlue.withOpacity(0.2),
-                      labelStyle: TextStyle(
-                        color: isSelected ? primaryBlue : darkGray,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        side: BorderSide(
-                          color: isSelected ? primaryBlue : Colors.grey[300]!,
-                        ),
-                      ),
-                      backgroundColor: Colors.white,
                     ),
-                  );
-                }).toList(),
+                  ),
+              ],
+            ),
+          ),
+          if (selectedSort == RecipeSortType.recommended)
+            ExpansionTile(
+              tilePadding: EdgeInsets.zero,
+              childrenPadding: const EdgeInsets.only(bottom: 12),
+              shape: const Border(),
+              collapsedShape: const Border(),
+              title: const Text(
+                '\ucd94\ucc9c \uae30\uc900',
+                style: TextStyle(fontSize: 12, color: mediumGray),
               ),
+              children: const [
+                Text(
+                  '\ubcf4\uc720 \uc7ac\ub8cc \ube44\uc728\uacfc \ubcf4\uc720 \ubbf8\ud655\uc778 \uc218\ub97c \uba3c\uc800 \ubd10\uc694. \uac19\uc740 \uacc4\uc815\uc774\uba74 \ud655\uc778\ub41c \uc774\ubc88 \uc8fc \uc2dd\uc0ac \uae30\ub85d\uacfc 3\uc77c \uc774\ub0b4 \uc7ac\ub8cc\ub97c \ubc18\uc601\ud574\uc694.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: mediumGray,
+                    height: 1.5,
+                  ),
+                ),
+              ],
             ),
-          ),
-          const VerticalDivider(width: 16, indent: 8, endIndent: 8),
-          Text(
-            '만들 수 있는 요리만',
-            style: TextStyle(
-              fontSize: 12,
-              color: canMakeOnly ? primaryBlue : mediumGray,
-              fontWeight: FontWeight.w600,
+          SwitchListTile.adaptive(
+            contentPadding: EdgeInsets.zero,
+            title: const Text(
+              '재료 이름이 모두 일치하는 요리',
+              style: TextStyle(fontSize: 14),
             ),
-          ),
-          const SizedBox(width: 4),
-          Switch(
             value: canMakeOnly,
             onChanged: (value) {
               ref.read(canMakeFilterProvider.notifier).update(value);
-              ref.invalidate(paginatedRecipesProvider);
             },
-            activeThumbColor: primaryBlue,
-            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            trackOutlineWidth: WidgetStateProperty.all(0),
           ),
         ],
       ),
@@ -291,381 +357,221 @@ class SortOptions extends ConsumerWidget {
 }
 
 class RecipeCard extends ConsumerWidget {
-  final RecommendedRecipe recommendedRecipe;
-  const RecipeCard({super.key, required this.recommendedRecipe});
+  final Recipe recipe;
+  const RecipeCard({super.key, required this.recipe, this.compact = false});
+  final bool compact;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final recipe = recommendedRecipe.recipe;
     final ingredients = ref.watch(ingredientsProvider);
-
-    // Calculate recommendation details on the fly for the card
-    final ownedIngredientsCount = ingredients.when(
-      data: (data) {
-        final myIngredientNames = data.map((e) => e.name).toSet();
-        return recipe.requiredIngredients
-            .where((req) => myIngredientNames.contains(req))
-            .length;
-      },
-      loading: () => 0,
-      error: (_, __) => 0,
+    final availability = IngredientAvailability(
+      recipe.requiredIngredients,
+      ref.watch(usableIngredientNamesProvider),
     );
+    final inventoryReady = !ingredients.isLoading && !ingredients.hasError;
     final hasAllIngredients =
-        ownedIngredientsCount == recipe.requiredIngredients.length;
+        inventoryReady &&
+        recipe.eligibleForRecommendation &&
+        availability.canMake;
+    final image = recipe.originalVideo == null ? recipe.imageUrl : null;
+    final photo = recipe.originalVideo == null ? recipePhotoFor(recipe) : null;
+    final examplePhoto = recipe.originalVideo == null
+        ? recipeExamplePhotoFor(recipe)
+        : null;
+    final hasCover = RecipeCover(
+      imageUrl: image,
+      photo: photo,
+      examplePhoto: examplePhoto,
+    ).hasSources;
 
-    return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => RecipeDetailPage(recipe: recipe),
-        ),
-      ),
+    void openRecipe() => Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => RecipeDetailPage(recipe: recipe)),
+    );
+
+    return Semantics(
+      button: true,
+      onTap: openRecipe,
+      label: '${recipe.name} \ub808\uc2dc\ud53c \uc0c1\uc138 \uc5f4\uae30',
       child: Card(
+        key: const ValueKey('menu-editorial-card'),
         margin: const EdgeInsets.only(bottom: 20),
         elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         clipBehavior: Clip.antiAlias,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              height: 220,
-              width: double.infinity,
-              child: (recipe.imageUrl != null && recipe.imageUrl!.isNotEmpty)
-                  ? ClipRRect(
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(12),
-                      ),
-                      child: CachedNetworkImage(
-                        imageUrl: recipe.imageUrl!,
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => Shimmer.fromColors(
-                          baseColor: Colors.grey[300]!,
-                          highlightColor: Colors.grey[100]!,
-                          child: Container(color: Colors.white),
-                        ),
-                        errorWidget: (context, url, error) => const Center(
-                          child: Icon(
-                            Icons.ramen_dining_outlined,
-                            size: 60,
-                            color: mediumGray,
+        child: InkWell(
+          excludeFromSemantics: true,
+          onTap: openRecipe,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (hasCover)
+                SizedBox(
+                  key: const ValueKey('menu-recipe-cover'),
+                  height: compact ? 140 : 190,
+                  child: RecipeCover(
+                    imageUrl: image,
+                    photo: photo,
+                    examplePhoto: examplePhoto,
+                    label: '${recipe.name} \uc774\ubbf8\uc9c0',
+                  ),
+                ),
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            recipe.name,
+                            key: const ValueKey('menu-recipe-title'),
+                            style: TextStyle(
+                              color: darkGray,
+                              fontSize: compact ? 19 : 22,
+                              fontWeight: FontWeight.w700,
+                              height: 1.3,
+                              letterSpacing: -.6,
+                            ),
                           ),
                         ),
-                      ),
-                    )
-                  : const Center(
-                      child: Icon(
-                        Icons.ramen_dining_outlined,
-                        size: 60,
-                        color: mediumGray,
-                      ),
+                        const SizedBox(width: 12),
+                        const Padding(
+                          padding: EdgeInsets.only(top: 4),
+                          child: Icon(
+                            Icons.arrow_outward_rounded,
+                            color: primaryGreen,
+                            size: 22,
+                          ),
+                        ),
+                      ],
                     ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    recipe.name,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    recipe.description ?? '',
-                    style: const TextStyle(color: mediumGray, fontSize: 14),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Icon(
-                        hasAllIngredients
-                            ? Icons.check_circle
-                            : Icons.error_outline,
-                        color: hasAllIngredients
-                            ? const Color(0xFF20C997)
-                            : Colors.amber,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
+                    if (recipe.displayDescription.trim().isNotEmpty) ...[
+                      const SizedBox(height: 10),
                       Text(
-                        '$ownedIngredientsCount / ${recipe.requiredIngredients.length} 재료 보유중',
-                        style: const TextStyle(fontWeight: FontWeight.w500),
+                        recipePreviewText(recipe.displayDescription),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: mediumGray,
+                          fontSize: 14,
+                          height: 1.5,
+                        ),
                       ),
                     ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class RecipeDetailPage extends ConsumerStatefulWidget {
-  final Recipe recipe;
-  const RecipeDetailPage({super.key, required this.recipe});
-
-  @override
-  ConsumerState<RecipeDetailPage> createState() => _RecipeDetailPageState();
-}
-
-class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
-  Future<void> _launchURL(Uri url) async {
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-    } else {
-      // Could not launch the URL
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final recipe = widget.recipe;
-    final userProfile = ref.watch(userProfileProvider);
-    final likedIdsAsync = ref.watch(likedRecipeIdsProvider);
-    final ingredientsAsync = ref.watch(ingredientsProvider);
-
-    final hasYoutubeLink = recipe.youtubeVideoId?.isNotEmpty ?? false;
-    final hasBlogLink = recipe.blogUrl?.isNotEmpty ?? false;
-
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: Text(
-          recipe.name,
-          style: const TextStyle(color: darkGray, fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: darkGray),
-        actions: [
-          likedIdsAsync.when(
-            data: (likedIds) {
-              final isLiked = likedIds.contains(recipe.id);
-              return IconButton(
-                icon: Icon(
-                  isLiked ? Icons.favorite : Icons.favorite_border,
-                  color: isLiked ? Colors.redAccent : mediumGray,
-                ),
-                onPressed: () async {
-                  try {
-                    await ref.read(likeRecipeProvider)(recipe.id, isLiked);
-                  } catch (e) {
-                    // 오류 처리
-                  }
-                },
-              );
-            },
-            loading: () => const IconButton(
-              icon: Icon(Icons.favorite_border, color: mediumGray),
-              onPressed: null,
-            ),
-            error: (_, __) => const SizedBox.shrink(),
-          ),
-          userProfile.when(
-            data: (profile) {
-              if (profile?.role == 'admin') {
-                return IconButton(
-                  icon: const Icon(Icons.edit_outlined),
-                  onPressed: () {
-                    // We need to create a RecommendedRecipe object to pass to the edit page
-                    final recommendedRecipe = RecommendedRecipe(
-                      recipe: recipe,
-                      ownedIngredientsCount: 0, // Placeholder
-                      requiredIngredientsCount:
-                          recipe.requiredIngredients.length,
-                      missingIngredients: [], // Placeholder
-                    );
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => AddRecipePage(recipe: recipe),
-                      ),
-                    );
-                  },
-                );
-              }
-              return const SizedBox.shrink();
-            },
-            loading: () => const SizedBox.shrink(),
-            error: (e, s) => const SizedBox.shrink(),
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (recipe.imageUrl != null && recipe.imageUrl!.isNotEmpty)
-              GestureDetector(
-                onTap: () => hasYoutubeLink
-                    ? _launchURL(
-                        Uri.parse(
-                          'https://www.youtube.com/watch?v=${recipe.youtubeVideoId!}',
-                        ),
+                    const SizedBox(height: 16),
+                    if (inventoryReady &&
+                        recipe.recommendationHoldReason == null)
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          _MenuBadge(
+                            '${availability.ownedIngredients.length} / ${availability.requiredIngredients.length} \uc7ac\ub8cc \ubcf4\uc720\uc911',
+                            missing: false,
+                          ),
+                          if (availability.missingIngredients.isNotEmpty)
+                            _MenuBadge(
+                              '\ubcf4\uc720 \ubbf8\ud655\uc778 ${availability.missingIngredients.length}',
+                              missing: true,
+                            ),
+                        ],
                       )
-                    : null,
-                child: Container(
-                  height: 220,
-                  width: double.infinity,
-                  color: Colors.black,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      CachedNetworkImage(
-                        imageUrl: recipe.imageUrl!,
-                        width: double.infinity,
-                        height: double.infinity,
-                        fit: BoxFit.cover,
-                        color: hasYoutubeLink
-                            ? Colors.black.withOpacity(0.3)
-                            : null,
-                        colorBlendMode: hasYoutubeLink
-                            ? BlendMode.darken
-                            : null,
-                        placeholder: (context, url) => Shimmer.fromColors(
-                          baseColor: Colors.grey[800]!,
-                          highlightColor: Colors.grey[700]!,
-                          child: Container(color: Colors.black),
-                        ),
-                        errorWidget: (context, url, error) =>
-                            const SizedBox.shrink(),
+                    else
+                      Row(
+                        children: [
+                          Icon(
+                            hasAllIngredients
+                                ? Icons.check_circle
+                                : Icons.info_outline,
+                            color: hasAllIngredients
+                                ? primaryGreen
+                                : warningInk,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              ingredients.isLoading
+                                  ? '\uc7ac\ub8cc \ud655\uc778 \uc911'
+                                  : ingredients.hasError
+                                  ? '\uc7ac\ub8cc \uc815\ubcf4\ub97c \ubd88\ub7ec\uc62c \uc218 \uc5c6\uc2b5\ub2c8\ub2e4.'
+                                  : '\uc7ac\ub8cc \ubaa9\ub85d \ud655\uc778 \ud544\uc694',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      if (hasYoutubeLink)
-                        const Icon(
-                          Icons.play_circle_outline,
-                          color: Colors.white70,
-                          size: 70,
+                    const SizedBox(height: 14),
+                    const Divider(height: 1),
+                    const SizedBox(height: 14),
+                    Text(
+                      recipe.dataQualityNotice,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: mediumGray,
+                        height: 1.5,
+                      ),
+                    ),
+                    if (recipe.originalVideo != null) ...[
+                      const SizedBox(height: 8),
+                      const Text(
+                        '\uc800\uc7a5\ub41c \uc74c\uc2dd \uc815\ubcf4 \u00b7 \ucc38\uace0 \uc601\uc0c1\uc740 \uc678\ubd80\uc5d0\uc11c \ubcf4\uae30',
+                        style: TextStyle(
+                          color: primaryGreen,
+                          fontWeight: FontWeight.w700,
                         ),
+                      ),
                     ],
-                  ),
+                    if (recipe.browsingContentWarning != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        recipe.browsingContentWarning!,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                    if (inventoryReady) ...[
+                      const SizedBox(height: 8),
+                      PantryMatchPanel(
+                        availability: availability,
+                        holdReason: recipe.recommendationHoldReason,
+                      ),
+                    ],
+                  ],
                 ),
               ),
-            Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    recipe.name,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  if (recipe.description != null &&
-                      recipe.description!.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
-                      child: MarkdownBody(data: recipe.description!),
-                    ),
-                  const SizedBox(height: 24),
-                  const Text(
-                    '필요한 재료',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 12),
-                  ingredientsAsync.when(
-                    data: (ingredients) {
-                      final myIngredientNames = ingredients
-                          .map((e) => e.name)
-                          .toSet();
-                      return Wrap(
-                        spacing: 8.0,
-                        runSpacing: 8.0,
-                        children: recipe.requiredIngredients.map((ing) {
-                          final isOwned = myIngredientNames.contains(ing);
-                          return Chip(
-                            avatar: Icon(
-                              isOwned
-                                  ? Icons.check_circle
-                                  : Icons.remove_circle_outline,
-                              color: isOwned
-                                  ? const Color(0xFF087F5B)
-                                  : const Color(0xFFC62828),
-                              size: 18,
-                            ),
-                            label: Text(ing),
-                            backgroundColor: isOwned
-                                ? const Color(0xFF20C997).withOpacity(0.1)
-                                : const Color(0xFFE57373).withOpacity(0.1),
-                            labelStyle: TextStyle(
-                              color: isOwned
-                                  ? const Color(0xFF087F5B)
-                                  : const Color(0xFFC62828),
-                              fontWeight: FontWeight.w500,
-                            ),
-                            side: BorderSide.none,
-                          );
-                        }).toList(),
-                      );
-                    },
-                    loading: () => const CircularProgressIndicator(),
-                    error: (_, __) => const Text('재료 정보를 불러올 수 없습니다.'),
-                  ),
-                  const SizedBox(height: 24),
-                  if (hasYoutubeLink)
-                    ElevatedButton.icon(
-                      onPressed: () => _launchURL(
-                        Uri.parse(
-                          'https://www.youtube.com/watch?v=${recipe.youtubeVideoId!}',
-                        ),
-                      ),
-                      icon: const Icon(Icons.play_arrow, color: Colors.white),
-                      label: const Text(
-                        '유튜브 영상 보러가기',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFF0000),
-                        minimumSize: const Size(double.infinity, 50),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  if (hasYoutubeLink && hasBlogLink) const SizedBox(height: 12),
-                  if (hasBlogLink)
-                    ElevatedButton.icon(
-                      onPressed: () => _launchURL(Uri.parse(recipe.blogUrl!)),
-                      icon: const Icon(
-                        Icons.article_outlined,
-                        color: Colors.white,
-                      ),
-                      label: const Text(
-                        '블로그 레시피 보기',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF20C997),
-                        minimumSize: const Size(double.infinity, 50),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
+}
+
+class _MenuBadge extends StatelessWidget {
+  const _MenuBadge(this.label, {required this.missing});
+  final String label;
+  final bool missing;
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+    decoration: BoxDecoration(
+      color: missing ? const Color(0xFFF3F3F3) : softGreen,
+      borderRadius: BorderRadius.circular(20),
+    ),
+    child: Text(
+      label,
+      style: TextStyle(
+        fontSize: 11,
+        color: missing ? warningInk : darkGray,
+        fontWeight: FontWeight.w700,
+      ),
+    ),
+  );
 }
 
 class RecipeCardSkeleton extends StatelessWidget {
@@ -674,16 +580,16 @@ class RecipeCardSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 20),
+      margin: const EdgeInsets.only(bottom: 16),
       elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(height: 220, width: double.infinity, color: Colors.white),
+          Container(height: 180, width: double.infinity, color: Colors.white),
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(pageGutter, 8, pageGutter, 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -705,4 +611,23 @@ class RecipeCardSkeleton extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A separate layout region keeps the admin action clear of scrollable cards.
+class RecipeCreateAction extends StatelessWidget {
+  const RecipeCreateAction({super.key, required this.onPressed});
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => SafeArea(
+    top: false,
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(pageGutter, 8, pageGutter, 8),
+      child: FilledButton.icon(
+        onPressed: onPressed,
+        icon: const Icon(Icons.add),
+        label: const Text('레시피 추가'),
+      ),
+    ),
+  );
 }

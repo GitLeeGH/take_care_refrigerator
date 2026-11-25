@@ -9,6 +9,13 @@ import 'package:take_care_refrigerator/src/models.dart';
 
 import '../providers.dart';
 import '../theme.dart';
+import '../services/recipe_draft.dart';
+
+final recipeImagePickerProvider =
+    Provider<Future<XFile?> Function(ImageSource)>(
+      (ref) =>
+          (source) => ImagePicker().pickImage(source: source, imageQuality: 80),
+    );
 
 class AddRecipePage extends ConsumerStatefulWidget {
   final Recipe? recipe;
@@ -30,6 +37,7 @@ class _AddRecipePageState extends ConsumerState<AddRecipePage> {
 
   bool get isEditing => widget.recipe != null;
   bool _isLoading = false;
+  bool _pickingImage = false;
   XFile? _imageXFile;
   String? _imageUrl;
 
@@ -64,97 +72,150 @@ class _AddRecipePageState extends ConsumerState<AddRecipePage> {
   }
 
   String? _extractYoutubeId(String url) {
-    if (url.isEmpty) return null;
-    if (!url.contains("youtube.com/") && !url.contains("youtu.be/")) return null;
-    try {
-      final uri = Uri.parse(url);
-      if (url.contains("youtu.be")) return uri.pathSegments.first;
-      return uri.queryParameters['v'];
-    } catch (e) {
-      return null;
-    }
+    return YoutubeSource.parse(url)?.videoId;
   }
 
   Future<String?> _uploadImage(XFile image) async {
     final supabase = ref.read(supabaseProvider);
-    final fileName = '${DateTime.now().millisecondsSinceEpoch}.${image.name.split('.').last}';
+    final fileName =
+        '${DateTime.now().millisecondsSinceEpoch}.${image.name.split('.').last}';
     final filePath = 'recipe_images/$fileName';
 
     try {
       if (kIsWeb) {
         final imageBytes = await image.readAsBytes();
-        await supabase.storage.from('recipes').uploadBinary(
+        await supabase.storage
+            .from('recipes')
+            .uploadBinary(
               filePath,
               imageBytes,
-              fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
+              fileOptions: const FileOptions(
+                cacheControl: '3600',
+                upsert: false,
+              ),
             );
       } else {
         final imageFile = File(image.path);
-        await supabase.storage.from('recipes').upload(
+        await supabase.storage
+            .from('recipes')
+            .upload(
               filePath,
               imageFile,
-              fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
+              fileOptions: const FileOptions(
+                cacheControl: '3600',
+                upsert: false,
+              ),
             );
       }
       return supabase.storage.from('recipes').getPublicUrl(filePath);
-    } on StorageException catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("이미지 업로드 실패: ${e.message}"), backgroundColor: Colors.red));
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("오류 발생: $e"), backgroundColor: Colors.red));
+    } catch (_) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('사진을 업로드하지 못했습니다. 연결을 확인하고 다시 시도해 주세요.'),
+            backgroundColor: Colors.red,
+          ),
+        );
     }
     return null;
   }
 
-  Future<void> _pickImage({required ImageSource source, required bool isCover}) async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: source, imageQuality: 80);
-
-    if (pickedFile == null) return;
-
-    if (isCover) {
-      setState(() {
-        _imageXFile = pickedFile;
-      });
-    } else {
-      setState(() => _isLoading = true);
-      final imageUrl = await _uploadImage(pickedFile);
-      if (imageUrl != null) {
-        final markdownImage = '\n![설명]($imageUrl)\n';
-        final controller = _descriptionController;
-        final text = controller.text;
-        final selection = controller.selection;
-        final newText = text.replaceRange(selection.start, selection.end, markdownImage);
-        controller.value = controller.value.copyWith(
-          text: newText,
-          selection: TextSelection.collapsed(offset: selection.start + markdownImage.length),
-        );
+  Future<void> _pickImage({
+    required ImageSource source,
+    required bool isCover,
+  }) async {
+    if (_pickingImage || _isLoading) return;
+    setState(() => _pickingImage = true);
+    try {
+      final pickedFile = await ref.read(recipeImagePickerProvider)(source);
+      if (pickedFile == null || !mounted) return;
+      if (isCover) {
+        setState(() => _imageXFile = pickedFile);
+      } else {
+        setState(() => _isLoading = true);
+        final imageUrl = await _uploadImage(pickedFile);
+        if (!mounted) return;
+        if (imageUrl != null) {
+          final markdownImage = '\n![사진]($imageUrl)\n';
+          final text = _descriptionController.text;
+          final selection = _descriptionController.selection;
+          final start = selection.isValid
+              ? selection.start.clamp(0, text.length)
+              : text.length;
+          final end = selection.isValid
+              ? selection.end.clamp(start, text.length)
+              : start;
+          _descriptionController.value = TextEditingValue(
+            text: text.replaceRange(start, end, markdownImage),
+            selection: TextSelection.collapsed(
+              offset: start + markdownImage.length,
+            ),
+          );
+        }
       }
-      setState(() => _isLoading = false);
+    } catch (_) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              '사진을 선택하지 못했습니다. 권한을 확인하고 다시 시도하거나 다른 사진 선택 방법을 이용해 주세요. 입력한 내용은 유지됩니다.',
+            ),
+          ),
+        );
+    } finally {
+      if (mounted)
+        setState(() {
+          _pickingImage = false;
+          _isLoading = false;
+        });
     }
   }
 
   Future<void> _showImageSourceDialog({required bool isCover}) async {
+    if (_pickingImage || _isLoading) return;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('이미지 선택'),
-        content: const Text('사진을 가져올 방법을 선택하세요.'),
+        content: Text(
+          isCover
+              ? '대표 사진은 저장할 때 서버에 업로드됩니다. 개인정보가 없는 사진을 선택해 주세요.'
+              : '본문 사진은 선택 직후 서버에 업로드되어 공유용 URL로 삽입됩니다. 작성 취소 후에도 서버에 남을 수 있으니 개인정보가 없는 사진만 선택해 주세요.',
+        ),
         actions: [
-          TextButton(onPressed: () { Navigator.pop(context); _pickImage(source: ImageSource.camera, isCover: isCover); }, child: const Text('카메라')),
-          TextButton(onPressed: () { Navigator.pop(context); _pickImage(source: ImageSource.gallery, isCover: isCover); }, child: const Text('갤러리')),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _pickImage(source: ImageSource.camera, isCover: isCover);
+            },
+            child: const Text('카메라'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _pickImage(source: ImageSource.gallery, isCover: isCover);
+            },
+            child: const Text('갤러리'),
+          ),
         ],
       ),
     );
   }
 
   Future<void> _submit() async {
+    if (_pickingImage || _isLoading) return;
     if (!_formKey.currentState!.validate()) return;
 
     final youtubeUrl = _youtubeUrlController.text.trim();
     final blogUrl = _blogUrlController.text.trim();
 
     if (youtubeUrl.isEmpty && blogUrl.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('유튜브 또는 블로그 주소 중 하나는 반드시 입력해야 합니다.'), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('유튜브 또는 블로그 주소 중 하나는 반드시 입력해야 합니다.'),
+          backgroundColor: Colors.red,
+        ),
+      );
       return;
     }
 
@@ -162,13 +223,23 @@ class _AddRecipePageState extends ConsumerState<AddRecipePage> {
     if (youtubeUrl.isNotEmpty) {
       youtubeId = _extractYoutubeId(youtubeUrl);
       if (youtubeId == null) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('유효하지 않은 유튜브 주소입니다.'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('유효하지 않은 유튜브 주소입니다.'),
+            backgroundColor: Colors.red,
+          ),
+        );
         return;
       }
     }
 
     if (_imageUrl == null && _imageXFile == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('대표 이미지를 등록해주세요.'), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('대표 이미지를 등록해주세요.'),
+          backgroundColor: Colors.red,
+        ),
+      );
       return;
     }
 
@@ -183,7 +254,11 @@ class _AddRecipePageState extends ConsumerState<AddRecipePage> {
       }
     }
 
-    final ingredients = _ingredientsController.text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+    final ingredients = _ingredientsController.text
+        .split(',')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
     final data = {
       'name': _nameController.text,
       'description': _descriptionController.text,
@@ -197,13 +272,21 @@ class _AddRecipePageState extends ConsumerState<AddRecipePage> {
 
     try {
       if (isEditing) {
-        await ref.read(supabaseProvider).from('recipes').update(data).eq('id', widget.recipe!.id);
+        await ref
+            .read(supabaseProvider)
+            .from('recipes')
+            .update(data)
+            .eq('id', widget.recipe!.id);
       } else {
         await ref.read(supabaseProvider).from('recipes').insert(data);
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('레시피가 성공적으로 ${isEditing ? '수정' : '추가'}되었습니다!')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('레시피가 성공적으로 ${isEditing ? '수정' : '추가'}되었습니다!'),
+          ),
+        );
         // Invalidate all providers related to recipe lists to ensure data is refreshed
         ref.invalidate(recommendedIdsProvider);
         ref.invalidate(popularIdsProvider);
@@ -212,7 +295,13 @@ class _AddRecipePageState extends ConsumerState<AddRecipePage> {
         Navigator.of(context).pop();
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('오류가 발생했습니다: $e'), backgroundColor: Colors.red));
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('레시피를 저장하지 못했습니다. 연결을 확인하고 다시 시도해 주세요.'),
+            backgroundColor: Colors.red,
+          ),
+        );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -221,65 +310,150 @@ class _AddRecipePageState extends ConsumerState<AddRecipePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(isEditing ? '레시피 수정' : '레시피 추가'), backgroundColor: Colors.white, foregroundColor: darkGray),
+      appBar: AppBar(
+        title: Text(isEditing ? '레시피 수정' : '레시피 추가'),
+        backgroundColor: Colors.white,
+        foregroundColor: darkGray,
+      ),
       body: Form(
         key: _formKey,
         child: ListView(
           padding: const EdgeInsets.all(16.0),
           children: [
-            const Text('대표 이미지', style: TextStyle(fontSize: 12, color: Colors.grey)),
+            const Text(
+              '대표 이미지',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
             const SizedBox(height: 8),
             GestureDetector(
               onTap: () => _showImageSourceDialog(isCover: true),
               child: AspectRatio(
                 aspectRatio: 16 / 9,
                 child: Container(
-                  decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(8)),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                   child: _imageXFile != null
                       ? ClipRRect(
                           borderRadius: BorderRadius.circular(8),
                           child: kIsWeb
-                              ? Image.network(_imageXFile!.path, fit: BoxFit.cover)
-                              : Image.file(File(_imageXFile!.path), fit: BoxFit.cover),
+                              ? Image.network(
+                                  _imageXFile!.path,
+                                  fit: BoxFit.cover,
+                                )
+                              : Image.file(
+                                  File(_imageXFile!.path),
+                                  fit: BoxFit.cover,
+                                ),
                         )
                       : (_imageUrl != null
-                          ? ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.network(_imageUrl!, fit: BoxFit.cover),
-                            )
-                          : const Center(child: Icon(Icons.add_a_photo_outlined, size: 40, color: Colors.grey))),
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.network(
+                                  _imageUrl!,
+                                  fit: BoxFit.cover,
+                                ),
+                              )
+                            : const Center(
+                                child: Icon(
+                                  Icons.add_a_photo_outlined,
+                                  size: 40,
+                                  color: Colors.grey,
+                                ),
+                              )),
                 ),
               ),
             ),
             const SizedBox(height: 24),
-            TextFormField(controller: _nameController, decoration: const InputDecoration(labelText: '요리 이름'), validator: (value) => (value == null || value.isEmpty) ? '필수 항목입니다.' : null),
+            TextFormField(
+              controller: _nameController,
+              decoration: const InputDecoration(labelText: '요리 이름'),
+              validator: (value) =>
+                  (value == null || value.isEmpty) ? '필수 항목입니다.' : null,
+            ),
             const SizedBox(height: 16),
-            TextFormField(controller: _descriptionController, decoration: const InputDecoration(labelText: '요리 과정 (마크다운 지원)', helperText: '예: # 제목, **진하게**, 1. 순서 목록', alignLabelWithHint: true), maxLines: 10),
+            TextFormField(
+              controller: _descriptionController,
+              decoration: const InputDecoration(
+                labelText: '요리 과정 (마크다운 지원)',
+                helperText: '예: # 제목, **진하게**, 1. 순서 목록',
+                alignLabelWithHint: true,
+              ),
+              maxLines: 10,
+            ),
             const SizedBox(height: 8),
             OutlinedButton.icon(
               onPressed: () => _showImageSourceDialog(isCover: false),
               icon: const Icon(Icons.add_photo_alternate_outlined, size: 18),
               label: const Text('과정 사진 추가'),
-              style: OutlinedButton.styleFrom(foregroundColor: darkGray, side: const BorderSide(color: Colors.grey)),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: darkGray,
+                side: const BorderSide(color: Colors.grey),
+              ),
             ),
             const SizedBox(height: 16),
-            TextFormField(controller: _youtubeUrlController, decoration: const InputDecoration(labelText: '유튜브 주소', helperText: '전체 유튜브 주소를 입력하세요.')),
+            TextFormField(
+              controller: _youtubeUrlController,
+              decoration: const InputDecoration(
+                labelText: '유튜브 주소',
+                helperText: '전체 유튜브 주소를 입력하세요.',
+              ),
+            ),
             const SizedBox(height: 16),
-            TextFormField(controller: _blogUrlController, decoration: const InputDecoration(labelText: '블로그 주소', helperText: '전체 블로그 주소를 입력하세요.')),
+            TextFormField(
+              controller: _blogUrlController,
+              decoration: const InputDecoration(
+                labelText: '블로그 주소',
+                helperText: '전체 블로그 주소를 입력하세요.',
+              ),
+            ),
             const SizedBox(height: 16),
-            TextFormField(controller: _ingredientsController, decoration: const InputDecoration(labelText: '필요 재료', helperText: '쉼표(,)로 재료를 구분하여 입력하세요.'), validator: (value) => (value == null || value.isEmpty) ? '필수 항목입니다.' : null),
+            TextFormField(
+              controller: _ingredientsController,
+              decoration: const InputDecoration(
+                labelText: '필요 재료',
+                helperText: '쉼표(,)로 재료를 구분하여 입력하세요.',
+              ),
+              validator: (value) =>
+                  (value == null || value.isEmpty) ? '필수 항목입니다.' : null,
+            ),
             const SizedBox(height: 16),
             Row(
               children: [
-                Expanded(child: TextFormField(controller: _totalTimeController, decoration: const InputDecoration(labelText: '총 소요 시간'))),
+                Expanded(
+                  child: TextFormField(
+                    controller: _totalTimeController,
+                    decoration: const InputDecoration(labelText: '총 소요 시간'),
+                  ),
+                ),
                 const SizedBox(width: 16),
-                Expanded(child: TextFormField(controller: _cuisineTypeController, decoration: const InputDecoration(labelText: '요리 종류'))),
+                Expanded(
+                  child: TextFormField(
+                    controller: _cuisineTypeController,
+                    decoration: const InputDecoration(labelText: '요리 종류'),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 32),
             _isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : ElevatedButton(onPressed: _submit, style: ElevatedButton.styleFrom(backgroundColor: primaryBlue, padding: const EdgeInsets.symmetric(vertical: 16), textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)), child: Text(isEditing ? '수정하기' : '저장하기', style: const TextStyle(color: Colors.white))),
+                : ElevatedButton(
+                    onPressed: _submit,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryBlue,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      textStyle: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    child: Text(
+                      isEditing ? '수정하기' : '저장하기',
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  ),
           ],
         ),
       ),
